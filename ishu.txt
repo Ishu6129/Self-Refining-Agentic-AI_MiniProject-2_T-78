@@ -1,0 +1,285 @@
+================================================================================
+📋 PROJECT OVERVIEW
+================================================================================
+TEAM LEADER - ISHU AGRAWAL
+Agentic AI Project T-78: Cloud-Deployed Self-Relining Agentic AI
+================================================================================
+
+📌 ROLE ASSIGNMENT
+------------------
+ROLE: Team Leader + System Designer + Agent Developer
+ASSIGNED AGENTS: PLANNER MODULE + CRITIC MODULE (2 Agents)
+
+📋 RESPONSIBILITIES:
+▸ System architecture and integration
+▸ Planner Agent: Task decomposition logic
+▸ Critic Agent: Output evaluation and feedback
+▸ Documentation and team coordination
+▸ Final integration of all modules
+
+════════════════════════════════════════════════════════════════════════════════
+
+🚀 GROQ AI SETUP - STEP BY STEP (DO THIS FIRST)
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 1: GET FREE API KEY (5 minutes)
+-------------------------------------
+1. Open browser: https://console.groq.com
+2. Click "Sign Up" (use your email)
+3. Verify email
+4. Go to "API Keys" section
+5. Click "Create API Key"
+6. Copy the key (starts with "gsk_...")
+7. 🔐 SAVE THIS KEY - you cannot see it again!
+
+────────────────────────────────────────────────────────────────────────────────
+
+STEP 2: INSTALL SOFTWARE (10 minutes)
+--------------------------------------
+Open terminal/command prompt:
+
+# Create project folder
+mkdir T78-AgenticAI
+cd T78-AgenticAI
+
+# Create virtual environment
+python -m venv venv
+
+# Activate environment
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
+
+# Install required packages
+pip install groq python-dotenv asyncio
+
+────────────────────────────────────────────────────────────────────────────────
+
+STEP 3: CREATE ENVIRONMENT FILE
+--------------------------------
+Create file named ".env" in T78-AgenticAI folder:
+
+GROQ_API_KEY=gsk_your_actual_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_FAST_MODEL=mixtral-8x7b-32768
+
+────────────────────────────────────────────────────────────────────────────────
+
+STEP 4: TEST YOUR SETUP
+------------------------
+Create file "test_groq.py":
+
+import os
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+response = client.chat.completions.create(
+    model="llama-3.3-70b-versatile",
+    messages=[{"role": "user", "content": "Say hello"}],
+    max_tokens=100
+)
+
+print(response.choices[0].message.content)
+print("✅ GROQ WORKS!")
+
+Run: python test_groq.py
+
+════════════════════════════════════════════════════════════════════════════════
+
+🤖 YOUR AGENTS - IMPLEMENTATION DETAILS
+════════════════════════════════════════════════════════════════════════════════
+
+AGENT 1: PLANNER MODULE (Task Decomposition)
+════════════════════════════════════════════════════════════════════════════════
+Purpose: Convert high-level goals into structured sub-tasks
+
+Create file: planner_agent.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import os
+import json
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class PlannerAgent:
+    def __init__(self):
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        self.model = os.getenv("GROQ_MODEL")
+    
+    def decompose_goal(self, goal: str) -> dict:
+        \"\"\"Break down goal into sub-tasks\"\"\"
+        
+        system_prompt = \"\"\"You are a Planner Agent. Your job is to decompose 
+high-level goals into specific, actionable sub-tasks.
+ 
+Rules:
+1. Create 3-7 sub-tasks maximum
+2. Order them logically (dependencies first)
+3. Each sub-task must be specific and measurable
+4. Include estimated complexity (Low/Medium/High)
+
+Respond ONLY in valid JSON format:
+{
+    "goal": "original goal",
+    "subtasks": [
+        {
+            "id": 1,
+            "description": "specific action",
+            "complexity": "Low|Medium|High",
+            "dependencies": []
+        }
+    ],
+    "total_steps": 5,
+    "estimated_time": "30 minutes"
+}\"\"\"
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Decompose this goal: {goal}"}
+            ],
+            temperature=0.3,
+            max_tokens=2048,
+            response_format={"type": "json_object"}
+        )
+        
+        return json.loads(response.choices[0].message.content)
+
+# Test it
+if __name__ == "__main__":
+    planner = PlannerAgent()
+    result = planner.decompose_goal("Build a website for my portfolio")
+    print(json.dumps(result, indent=2))
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AGENT 2: CRITIC MODULE (Output Evaluation)
+════════════════════════════════════════════════════════════════════════════════
+Purpose: Review outputs and provide improvement feedback
+
+Create file: critic_agent.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import os
+import json
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class CriticAgent:
+    def __init__(self):
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        self.model = os.getenv("GROQ_MODEL")
+    
+    def evaluate_output(self, original_goal: str, output: str, 
+                       execution_steps: list) -> dict:
+        \"\"\"Critique the execution output\"\"\"
+        
+        system_prompt = \"\"\"You are a Critic Agent. Your job is to evaluate 
+AI-generated outputs for quality, accuracy, and completeness.
+
+Check for:
+1. Factual errors or hallucinations
+2. Missing information or gaps
+3. Logical inconsistencies
+4. Areas for improvement
+5. Whether the goal was fully achieved
+
+Respond ONLY in valid JSON:
+{
+    "is_satisfactory": true|false,
+    "quality_score": 0-100,
+    "issues_found": ["issue1", "issue2"],
+    "strengths": ["good point1"],
+    "improvement_suggestions": ["suggestion1"],
+    "needs_refinement": true|false,
+    "refinement_focus": "specific area to improve"
+}\"\"\"
+
+        context = f\"\"\"
+Original Goal: {original_goal}
+Execution Steps: {json.dumps(execution_steps)}
+Output to Evaluate: {output}
+\"\"\"
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": context}
+            ],
+            temperature=0.2,
+            max_tokens=2048,
+            response_format={"type": "json_object"}
+        )
+        
+        return json.loads(response.choices[0].message.content)
+
+# Test it
+if __name__ == "__main__":
+    critic = CriticAgent()
+    result = critic.evaluate_output(
+        "Build a calculator app",
+        "Created a Python script with add/subtract functions",
+        ["Step 1: Write code", "Step 2: Test"]
+    )
+    print(json.dumps(result, indent=2))
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+════════════════════════════════════════════════════════════════════════════════
+
+🔄 INTEGRATION: Connect with Aryan and Priyanshu
+════════════════════════════════════════════════════════════════════════════════
+
+Your agents must integrate with:
+
+1️⃣ Aryan's Executor Agent (your Planner output → Aryan's input)
+2️⃣ Aryan's Memory Module (store plans and critiques)
+3️⃣ Priyanshu's Frontend (display plan structure and critique results)
+
+📊 API Contract:
+▸ Planner returns: {"subtasks": [...], "total_steps": N}
+▸ Critic returns: {"is_satisfactory": bool, "quality_score": 0-100}
+
+════════════════════════════════════════════════════════════════════════════════
+
+✅ DELIVERABLES CHECKLIST
+════════════════════════════════════════════════════════════════════════════════
+
+🗓️ Week 3: [ ] Planner module working with Groq
+🗓️ Week 5: [ ] Critic module + integration with Executor
+🗓️ Week 7: [ ] Full system integration test
+🗓️ Week 8: [ ] Documentation and final review
+
+════════════════════════════════════════════════════════════════════════════════
+
+⚠️ IMPORTANT NOTES
+════════════════════════════════════════════════════════════════════════════════
+
+📊 Daily limit: 14,400 requests (track usage!)
+🎯 Use llama-3.3-70b for accuracy (your agents need reasoning)
+🌡️ Keep temperature low (0.2-0.3) for consistent outputs
+📦 Always use response_format={"type": "json_object"} for structured data
+
+════════════════════════════════════════════════════════════════════════════════
+
+🤝 TEAM COORDINATION:
+────────────────────
+▸ Sync with Aryan daily on Memory API design
+▸ Review Priyanshu's UI mockups in Week 2
+▸ Lead weekly standup meetings
+
+❓ Questions? Ask mentor Dr. Sachin Kumar Yadav
+================================================================================
