@@ -1,0 +1,469 @@
+================================================================================
+BACKEND DEVELOPER - ARYAN PRATAP
+Agentic AI Project T-78: Cloud-Deployed Self-Relining Agentic AI
+================================================================================
+
+ROLE: Backend Developer + Cloud Deployment + API Implementation
+ASSIGNED AGENTS: EXECUTOR MODULE + MEMORY MODULE (2 Agents)
+
+RESPONSIBILITIES:
+- Executor Agent: Task execution engine
+- Memory Module: Persistent storage and retrieval
+- REST API development (Flask/FastAPI)
+- Cloud deployment setup
+- Database integration
+
+================================================================================
+GROQ AI SETUP - STEP BY STEP (DO THIS FIRST)
+================================================================================
+
+STEP 1: GET FREE API KEY (5 minutes)
+--------------------------------------
+1. Open browser: https://console.groq.com
+2. Sign up with your email
+3. Verify email
+4. Go to "API Keys" → "Create API Key"
+5. Copy key (starts with "gsk_...")
+6. NEVER share this key in code commits!
+
+STEP 2: INSTALL SOFTWARE (10 minutes)
+--------------------------------------
+Open terminal:
+
+mkdir T78-AgenticAI
+cd T78-AgenticAI
+
+python -m venv venv
+
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
+
+pip install groq python-dotenv flask flask-cors sqlite3
+
+STEP 3: CREATE ENVIRONMENT FILE
+--------------------------------
+Create file ".env":
+
+GROQ_API_KEY=gsk_your_actual_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_FAST_MODEL=mixtral-8x7b-32768
+FLASK_ENV=development
+DATABASE_URL=sqlite:///agent_memory.db
+
+STEP 4: TEST GROQ CONNECTION
+-----------------------------
+Create "test_groq.py":
+
+import os
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+
+client = Groq()
+response = client.chat.completions.create(
+    model="mixtral-8x7b-32768",
+    messages=[{"role": "user", "content": "Hello from Executor"}]
+)
+print(response.choices[0].message.content)
+print("✅ Connected to Groq!")
+
+Run: python test_groq.py
+
+================================================================================
+YOUR AGENTS - IMPLEMENTATION DETAILS
+================================================================================
+
+AGENT 3: EXECUTOR MODULE (Task Execution)
+-----------------------------------------
+Purpose: Execute planned sub-tasks and generate outputs
+
+Create file: executor_agent.py
+
+import os
+import json
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class ExecutorAgent:
+    def __init__(self):
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        self.model = os.getenv("GROQ_MODEL")
+        self.fast_model = os.getenv("GROQ_FAST_MODEL")
+    
+    def execute_task(self, task_description: str, task_type: str,
+                    context: dict = None) -> dict:
+        """Execute a single sub-task"""
+        
+        # Choose model based on task complexity
+        model = self.model if task_type in ["coding", "analysis"] else self.fast_model
+        
+        system_prompts = {
+            "coding": """You are a Code Executor. Write clean, working code.
+Include error handling and comments. Return JSON with code and explanation.""",
+            
+            "analysis": """You are an Analysis Executor. Provide deep insights 
+with data backing. Return JSON with findings and confidence scores.""",
+            
+            "writing": """You are a Content Executor. Create clear, engaging content.
+Return JSON with content and metadata.""",
+            
+            "research": """You are a Research Executor. Find accurate information.
+Return JSON with facts and sources."""
+        }
+        
+        prompt = system_prompts.get(task_type, system_prompts["analysis"])
+        
+        context_str = json.dumps(context) if context else "No context"
+        
+        user_content = f"""
+Task: {task_description}
+Type: {task_type}
+Context: {context_str}
+
+Execute this task and return JSON:
+{{
+    "result": "actual output",
+    "status": "success|partial_success|failed",
+    "details": "additional info",
+    "confidence": 0-1
+}}
+"""
+
+        response = self.client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": user_content}
+            ],
+            temperature=0.3,
+            max_tokens=4096,
+            response_format={"type": "json_object"}
+        )
+        
+        return json.loads(response.choices[0].message.content)
+    
+    def execute_plan(self, plan: dict, goal: str) -> list:
+        """Execute all sub-tasks in a plan"""
+        results = []
+        
+        for subtask in plan.get("subtasks", []):
+            print(f"Executing: {subtask['description']}")
+            
+            result = self.execute_task(
+                task_description=subtask["description"],
+                task_type=self._infer_task_type(subtask["description"]),
+                context={"goal": goal, "step": subtask["id"]}
+            )
+            
+            results.append({
+                "subtask_id": subtask["id"],
+                "result": result,
+                "completed_at": "timestamp"
+            })
+        
+        return results
+    
+    def _infer_task_type(self, description: str) -> str:
+        """Infer task type from description"""
+        desc_lower = description.lower()
+        if any(word in desc_lower for word in ["code", "program", "function", "script"]):
+            return "coding"
+        elif any(word in desc_lower for word in ["write", "content", "blog", "article"]):
+            return "writing"
+        elif any(word in desc_lower for word in ["analyze", "research", "study"]):
+            return "analysis"
+        else:
+            return "research"
+
+# Test
+if __name__ == "__main__":
+    executor = ExecutorAgent()
+    
+    # Test single task
+    result = executor.execute_task(
+        "Write a Python function to calculate factorial",
+        "coding"
+    )
+    print(json.dumps(result, indent=2))
+
+================================================================================
+
+AGENT 4: MEMORY MODULE (Persistent Storage)
+-------------------------------------------
+Purpose: Store and retrieve execution history, plans, and results
+
+Create file: memory_agent.py
+
+import os
+import json
+import sqlite3
+from datetime import datetime
+from typing import List, Dict, Optional
+
+class MemoryAgent:
+    def __init__(self, db_path: str = "agent_memory.db"):
+        self.db_path = db_path
+        self._init_database()
+    
+    def _init_database(self):
+        """Initialize SQLite database"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Goals table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS goals (
+                goal_id TEXT PRIMARY KEY,
+                description TEXT,
+                status TEXT,
+                created_at TIMESTAMP,
+                completed_at TIMESTAMP
+            )
+        """)
+        
+        # Plans table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS plans (
+                plan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                goal_id TEXT,
+                subtask_id INTEGER,
+                description TEXT,
+                complexity TEXT,
+                status TEXT,
+                FOREIGN KEY (goal_id) REFERENCES goals(goal_id)
+            )
+        """)
+        
+        # Execution results table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS executions (
+                execution_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_id INTEGER,
+                result TEXT,
+                confidence REAL,
+                executed_at TIMESTAMP,
+                FOREIGN KEY (plan_id) REFERENCES plans(plan_id)
+            )
+        """)
+        
+        # Critiques table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS critiques (
+                critique_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                execution_id INTEGER,
+                quality_score INTEGER,
+                issues TEXT,
+                suggestions TEXT,
+                created_at TIMESTAMP,
+                FOREIGN KEY (execution_id) REFERENCES executions(execution_id)
+            )
+        """)
+        
+        conn.commit()
+        conn.close()
+    
+    def store_goal(self, goal_id: str, description: str) -> bool:
+        """Store new goal"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO goals (goal_id, description, status, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (goal_id, description, "pending", datetime.now()))
+        
+        conn.commit()
+        conn.close()
+        return True
+    
+    def store_plan(self, goal_id: str, plan: dict) -> bool:
+        """Store decomposed plan"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        for subtask in plan.get("subtasks", []):
+            cursor.execute("""
+                INSERT INTO plans (goal_id, subtask_id, description, complexity, status)
+                VALUES (?, ?, ?, ?, ?)
+            """, (goal_id, subtask["id"], subtask["description"], 
+                  subtask["complexity"], "pending"))
+        
+        conn.commit()
+        conn.close()
+        return True
+    
+    def store_execution(self, plan_id: int, result: dict) -> int:
+        """Store execution result"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO executions (plan_id, result, confidence, executed_at)
+            VALUES (?, ?, ?, ?)
+        """, (plan_id, json.dumps(result), result.get("confidence", 0.0), datetime.now()))
+        
+        execution_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return execution_id
+    
+    def store_critique(self, execution_id: int, critique: dict) -> bool:
+        """Store critique result"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO critiques (execution_id, quality_score, issues, suggestions, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (execution_id, critique.get("quality_score", 0),
+              json.dumps(critique.get("issues_found", [])),
+              json.dumps(critique.get("improvement_suggestions", [])), datetime.now()))
+        
+        conn.commit()
+        conn.close()
+        return True
+    
+    def get_execution_history(self, goal_id: str) -> List[Dict]:
+        """Retrieve full execution history for a goal"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT g.*, p.*, e.*, c.*
+            FROM goals g
+            LEFT JOIN plans p ON g.goal_id = p.goal_id
+            LEFT JOIN executions e ON p.plan_id = e.plan_id
+            LEFT JOIN critiques c ON e.execution_id = c.execution_id
+            WHERE g.goal_id = ?
+        """, (goal_id,))
+        
+        results = cursor.fetchall()
+        conn.close()
+        return results
+
+# Test
+if __name__ == "__main__":
+    memory = MemoryAgent()
+    
+    # Test storage
+    memory.store_goal("goal_001", "Build a calculator app")
+    print("✅ Memory module working!")
+
+================================================================================
+
+API DEVELOPMENT (Flask Backend)
+--------------------------------
+Create file: app.py
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from executor_agent import ExecutorAgent
+from memory_agent import MemoryAgent
+import uuid
+
+app = Flask(__name__)
+CORS(app)
+
+executor = ExecutorAgent()
+memory = MemoryAgent()
+
+@app.route('/agent/goal', methods=['POST'])
+def submit_goal():
+    """API: Submit new goal"""
+    data = request.json
+    goal_id = str(uuid.uuid4())
+    
+    memory.store_goal(goal_id, data["goal"])
+    
+    return jsonify({
+        "goal_id": goal_id,
+        "status": "accepted",
+        "message": "Goal stored successfully"
+    })
+
+@app.route('/agent/execute', methods=['POST'])
+def execute_plan():
+    """API: Execute a plan"""
+    data = request.json
+    plan = data.get("plan")
+    goal = data.get("goal")
+    
+    results = executor.execute_plan(plan, goal)
+    
+    # Store results
+    for i, result in enumerate(results):
+        memory.store_execution(i+1, result["result"])
+    
+    return jsonify({
+        "status": "completed",
+        "results": results
+    })
+
+@app.route('/agent/memory/<goal_id>', methods=['GET'])
+def get_memory(goal_id):
+    """API: Retrieve execution history"""
+    history = memory.get_execution_history(goal_id)
+    return jsonify({"history": history})
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+
+# Run: python app.py
+# Test API: http://localhost:5000
+
+================================================================================
+
+CLOUD DEPLOYMENT (Week 7)
+--------------------------
+Platform: Render.com (free) or PythonAnywhere
+
+Steps:
+1. Create requirements.txt:
+   flask
+   flask-cors
+   groq
+   python-dotenv
+   gunicorn
+
+2. Create Procfile:
+   web: gunicorn app:app
+
+3. Push to GitHub
+
+4. Connect Render.com to GitHub repo
+
+5. Add environment variables in Render dashboard:
+   - GROQ_API_KEY
+   - GROQ_MODEL
+   - FLASK_ENV=production
+
+6. Deploy!
+
+================================================================================
+
+INTEGRATION CHECKLIST
+---------------------
+- [ ] Planner (Ishu) → Executor (You): Receive plan JSON
+- [ ] Executor (You) → Critic (Ishu): Send results for evaluation
+- [ ] Memory (You) → All agents: Store/retrieve data
+- [ ] Frontend (Priyanshu) → Your API: REST endpoints
+- [ ] All agents → Memory: Persistent storage
+
+DELIVERABLES:
+Week 4: Executor module working
+Week 5: Memory module + database
+Week 6: REST API complete
+Week 7: Cloud deployment live
+
+IMPORTANT:
+- Daily Groq limit: 14,400 requests (track in dashboard)
+- Use mixtral-8x7b for simple tasks (faster)
+- Use llama-3.3-70b for complex coding/analysis
+- Never commit .env file to GitHub!
+
+================================================================================
