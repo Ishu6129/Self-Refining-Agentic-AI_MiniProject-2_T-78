@@ -1,0 +1,719 @@
+================================================================================
+TEAM LEADER - ISHU AGRAWAL
+Agentic AI Project T-78: Cloud-Deployed Self-Relining Agentic AI
+N8N-Style Visual Workflow Builder
+================================================================================
+
+ROLE: Team Leader + System Architect + Full Stack Integration Lead
+ASSIGNED MODULES: 
+1. Planner Agent (Node Logic)
+2. Critic Agent (Node Logic)  
+3. Workflow Engine (Node Execution Orchestrator)
+4. System Integration & Team Coordination
+
+RESPONSIBILITIES:
+- Design node-based workflow architecture matching N8N patterns
+- Implement Planner Node: Task decomposition logic with Groq
+- Implement Critic Node: Output evaluation with Groq
+- Build Workflow Engine: Execute node chains (Planner → Executor → Critic)
+- MongoDB schema design for workflows, executions, and node states
+- API design for frontend-backend communication
+- Integration testing and deployment coordination
+- Code reviews for Aryan and Priyanshu
+
+================================================================================
+TECH STACK OVERVIEW
+================================================================================
+
+Frontend (Priyanshu):
+- React 18 + Vite
+- Tailwind CSS + shadcn/ui
+- React Flow (node-based editor)
+- Axios for API calls
+
+Backend - Node.js (Ishu & Aryan):
+- Node.js + Express.js
+- MongoDB + Mongoose
+- Groq SDK (LLM integration)
+- Socket.io (real-time execution updates)
+
+Backend - Python (Aryan):
+- Flask (only if specific Python libraries needed)
+- Bridge to Node.js via HTTP APIs
+
+Database:
+- MongoDB (Workflows, Executions, Node States, Memory)
+
+================================================================================
+GROQ AI SETUP - STEP BY STEP
+================================================================================
+
+STEP 1: GET API KEY
+-------------------
+1. Visit: https://console.groq.com
+2. Sign up → Create API Key
+3. Copy key (starts with "gsk_...")
+4. Save in backend .env file
+
+STEP 2: PROJECT SETUP
+---------------------
+mkdir T78-AgenticAI
+cd T78-AgenticAI
+
+# Initialize project structure
+mkdir -p backend-node/src/{agents,models,routes,controllers,middleware,utils,workflows}
+mkdir -p backend-flask (if needed)
+mkdir -p frontend
+mkdir -p shared/types
+
+# Backend Node.js setup
+cd backend-node
+npm init -y
+
+npm install express mongoose cors dotenv groq-sdk socket.io winston
+npm install -D nodemon typescript @types/node @types/express ts-node
+
+npx tsc --init
+
+cd ..
+
+STEP 3: ENVIRONMENT CONFIGURATION
+---------------------------------
+Create backend-node/.env:
+
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/agentic_ai
+GROQ_API_KEY=gsk_your_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_FAST_MODEL=mixtral-8x7b-32768
+NODE_ENV=development
+JWT_SECRET=your_jwt_secret_here
+
+================================================================================
+FOLDER STRUCTURE (Full Project)
+================================================================================
+
+T78-AgenticAI/
+├── backend-node/                    # Primary Backend (Node.js + Express)
+│   ├── src/
+│   │   ├── agents/                  # Agent Logic (Your Domain)
+│   │   │   ├── planner.agent.ts     # Planner Node Logic
+│   │   │   ├── critic.agent.ts      # Critic Node Logic
+│   │   │   └── base.agent.ts        # Base Agent Class
+│   │   ├── workflows/               # Workflow Engine (Your Domain)
+│   │   │   ├── workflow.engine.ts   # Node Execution Orchestrator
+│   │   │   ├── node.executor.ts     # Individual Node Runner
+│   │   │   └── node.types.ts        # Node Type Definitions
+│   │   ├── models/                  # MongoDB Schemas
+│   │   │   ├── workflow.model.ts    # Workflow (Node Graph)
+│   │   │   ├── execution.model.ts   # Execution Instances
+│   │   │   ├── node-state.model.ts  # Node Execution States
+│   │   │   └── user.model.ts        # User Management
+│   │   ├── controllers/
+│   │   │   ├── workflow.controller.ts
+│   │   │   ├── execution.controller.ts
+│   │   │   └── agent.controller.ts
+│   │   ├── routes/
+│   │   │   ├── workflow.routes.ts
+│   │   │   ├── execution.routes.ts
+│   │   │   └── agent.routes.ts
+│   │   ├── utils/
+│   │   │   ├── groq.client.ts       # Groq API Client
+│   │   │   ├── logger.ts
+│   │   │   └── validators.ts
+│   │   └── app.ts                   # Express App Entry
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── .env
+│
+├── backend-flask/                   # Secondary Backend (Optional)
+│   ├── app.py                       # Flask App (if needed)
+│   ├── requirements.txt
+│   └── services/
+│       └── executor_service.py      # Aryan's Executor Logic
+│
+├── frontend/                        # Priyanshu's Domain
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── nodes/               # Node Type Components
+│   │   │   │   ├── PlannerNode.tsx
+│   │   │   │   ├── ExecutorNode.tsx
+│   │   │   │   ├── CriticNode.tsx
+│   │   │   │   └── CustomNode.tsx
+│   │   │   ├── workflow/
+│   │   │   │   ├── FlowEditor.tsx   # Main Canvas
+│   │   │   │   ├── NodePalette.tsx  # Sidebar (like N8N)
+│   │   │   │   ├── ExecutionLog.tsx # Bottom Panel
+│   │   │   │   └── PropertyPanel.tsx # Right Sidebar
+│   │   │   └── ui/                  # shadcn components
+│   │   ├── hooks/
+│   │   ├── types/
+│   │   ├── services/
+│   │   └── App.tsx
+│   ├── package.json
+│   └── tailwind.config.js
+│
+└── shared/
+    └── types/
+        ├── workflow.types.ts        # Shared TypeScript interfaces
+        └── node.types.ts
+
+================================================================================
+YOUR IMPLEMENTATION: PLANNER AGENT NODE
+================================================================================
+
+File: backend-node/src/agents/planner.agent.ts
+
+import { Groq } from 'groq-sdk';
+import { IAgent, AgentInput, AgentOutput, NodeConfig } from './base.agent';
+
+export interface PlannerInput extends AgentInput {
+  goal: string;
+  context?: Record<string, any>;
+}
+
+export interface PlannerOutput extends AgentOutput {
+  plan: {
+    subtasks: Array<{
+      id: string;
+      description: string;
+      complexity: 'low' | 'medium' | 'high';
+      dependencies: string[];
+      estimatedTime: string;
+    }>;
+    totalSteps: number;
+    reasoning: string;
+  };
+}
+
+export class PlannerAgent implements IAgent<PlannerInput, PlannerOutput> {
+  private groq: Groq;
+  private model: string;
+  
+  constructor() {
+    this.groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    this.model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  }
+
+  async execute(input: PlannerInput, config?: NodeConfig): Promise<PlannerOutput> {
+    const systemPrompt = `You are a Planner Agent in an Agentic AI system. 
+Your job is to decompose high-level goals into structured, executable sub-tasks.
+
+Rules:
+1. Create 3-7 sub-tasks maximum (manageable chunks)
+2. Order logically - dependencies first
+3. Each sub-task must be specific, measurable, and actionable
+4. Assign complexity: low (simple), medium (moderate), high (complex)
+5. Include estimated time for each sub-task
+
+Respond ONLY in valid JSON format:
+{
+  "reasoning": "brief explanation of your approach",
+  "plan": {
+    "subtasks": [
+      {
+        "id": "task_1",
+        "description": "specific action description",
+        "complexity": "low|medium|high",
+        "dependencies": [],
+        "estimatedTime": "30 minutes"
+      }
+    ],
+    "totalSteps": 5
+  }
+}`;
+
+    try {
+      const response = await this.groq.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Decompose this goal: ${input.goal}` }
+        ],
+        temperature: 0.3,
+        max_tokens: 4096,
+        response_format: { type: 'json_object' }
+      });
+
+      const result = JSON.parse(response.choices[0].message.content);
+      
+      return {
+        success: true,
+        data: result.plan,
+        metadata: {
+          tokensUsed: response.usage?.total_tokens || 0,
+          model: this.model,
+          reasoning: result.reasoning
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        data: null
+      };
+    }
+  }
+
+  getNodeDefinition() {
+    return {
+      type: 'planner',
+      name: 'Planner',
+      description: 'Decomposes goals into sub-tasks',
+      icon: '🎯',
+      category: 'Core',
+      inputs: ['goal'],
+      outputs: ['plan'],
+      color: '#F59E0B' // Amber-500
+    };
+  }
+}
+
+================================================================================
+YOUR IMPLEMENTATION: CRITIC AGENT NODE
+================================================================================
+
+File: backend-node/src/agents/critic.agent.ts
+
+import { Groq } from 'groq-sdk';
+import { IAgent, AgentInput, AgentOutput } from './base.agent';
+
+export interface CriticInput extends AgentInput {
+  originalGoal: string;
+  executionResult: any;
+  executionSteps: any[];
+}
+
+export interface CriticOutput extends AgentOutput {
+  critique: {
+    isSatisfactory: boolean;
+    qualityScore: number; // 0-100
+    issuesFound: string[];
+    strengths: string[];
+    improvementSuggestions: string[];
+    needsRefinement: boolean;
+    refinementFocus: string;
+  };
+}
+
+export class CriticAgent implements IAgent<CriticInput, CriticOutput> {
+  private groq: Groq;
+  private model: string;
+
+  constructor() {
+    this.groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    this.model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  }
+
+  async execute(input: CriticInput): Promise<CriticOutput> {
+    const systemPrompt = `You are a Critic Agent in an Agentic AI system.
+Your job is to evaluate execution outputs for quality, accuracy, and completeness.
+
+Evaluation Criteria:
+1. Factual accuracy (no hallucinations)
+2. Completeness (all requirements met)
+3. Logical consistency
+4. Clarity and coherence
+5. Efficiency of solution
+
+Scoring:
+- 90-100: Excellent (minor polish needed)
+- 70-89: Good (some improvements needed)
+- 50-69: Acceptable (significant issues)
+- Below 50: Unsatisfactory (needs major rework)
+
+Respond ONLY in valid JSON:
+{
+  "critique": {
+    "isSatisfactory": true/false,
+    "qualityScore": 85,
+    "issuesFound": ["issue 1", "issue 2"],
+    "strengths": ["good aspect 1"],
+    "improvementSuggestions": ["suggestion 1"],
+    "needsRefinement": true/false,
+    "refinementFocus": "specific area to improve"
+  }
+}`;
+
+    const context = `
+Original Goal: ${input.originalGoal}
+Execution Steps: ${JSON.stringify(input.executionSteps, null, 2)}
+Execution Result: ${JSON.stringify(input.executionResult, null, 2)}
+`;
+
+    try {
+      const response = await this.groq.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: context }
+        ],
+        temperature: 0.2,
+        max_tokens: 4096,
+        response_format: { type: 'json_object' }
+      });
+
+      const result = JSON.parse(response.choices[0].message.content);
+
+      return {
+        success: true,
+        data: result.critique,
+        metadata: {
+          tokensUsed: response.usage?.total_tokens || 0,
+          model: this.model
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        data: null
+      };
+    }
+  }
+
+  getNodeDefinition() {
+    return {
+      type: 'critic',
+      name: 'Critic',
+      description: 'Evaluates execution quality and suggests improvements',
+      icon: '🔍',
+      category: 'Core',
+      inputs: ['originalGoal', 'executionResult', 'executionSteps'],
+      outputs: ['critique', 'feedback'],
+      color: '#EF4444' // Red-500
+    };
+  }
+}
+
+================================================================================
+YOUR IMPLEMENTATION: WORKFLOW ENGINE
+================================================================================
+
+File: backend-node/src/workflows/workflow.engine.ts
+
+import { PlannerAgent } from '../agents/planner.agent';
+import { CriticAgent } from '../agents/critic.agent';
+import { ExecutionModel } from '../models/execution.model';
+import { NodeStateModel } from '../models/node-state.model';
+
+interface WorkflowNode {
+  id: string;
+  type: 'planner' | 'executor' | 'critic' | 'custom';
+  data: any;
+  position: { x: number; y: number };
+  connections: string[]; // Next node IDs
+}
+
+interface WorkflowExecution {
+  workflowId: string;
+  executionId: string;
+  nodes: WorkflowNode[];
+  startNode: string;
+  context: Record<string, any>;
+}
+
+export class WorkflowEngine {
+  private plannerAgent: PlannerAgent;
+  private criticAgent: CriticAgent;
+  private activeExecutions: Map<string, any>;
+
+  constructor() {
+    this.plannerAgent = new PlannerAgent();
+    this.criticAgent = new CriticAgent();
+    this.activeExecutions = new Map();
+  }
+
+  async executeWorkflow(execution: WorkflowExecution): Promise<void> {
+    const { executionId, nodes, startNode, context } = execution;
+    
+    // Initialize execution tracking
+    await ExecutionModel.create({
+      executionId,
+      workflowId: execution.workflowId,
+      status: 'running',
+      startedAt: new Date(),
+      context
+    });
+
+    this.activeExecutions.set(executionId, {
+      currentNode: startNode,
+      context,
+      results: {}
+    });
+
+    try {
+      await this.executeNode(executionId, startNode, nodes);
+      
+      await ExecutionModel.findOneAndUpdate(
+        { executionId },
+        { status: 'completed', completedAt: new Date() }
+      );
+    } catch (error) {
+      await ExecutionModel.findOneAndUpdate(
+        { executionId },
+        { status: 'failed', error: error.message }
+      );
+      throw error;
+    }
+  }
+
+  private async executeNode(
+    executionId: string, 
+    nodeId: string, 
+    nodes: WorkflowNode[]
+  ): Promise<void> {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) throw new Error(`Node ${nodeId} not found`);
+
+    const execution = this.activeExecutions.get(executionId);
+    
+    // Update node status to running
+    await this.updateNodeState(executionId, nodeId, 'running');
+
+    let result: any;
+
+    try {
+      switch (node.type) {
+        case 'planner':
+          result = await this.plannerAgent.execute({
+            goal: execution.context.goal,
+            ...node.data
+          });
+          execution.results.plan = result.data;
+          break;
+
+        case 'critic':
+          result = await this.criticAgent.execute({
+            originalGoal: execution.context.goal,
+            executionResult: execution.results.execution,
+            executionSteps: execution.results.plan?.subtasks || []
+          });
+          execution.results.critique = result.data;
+          break;
+
+        case 'executor':
+          // Call Aryan's Executor service
+          result = await this.callExecutorService(node.data, execution.results.plan);
+          execution.results.execution = result;
+          break;
+
+        default:
+          throw new Error(`Unknown node type: ${node.type}`);
+      }
+
+      // Mark node as completed
+      await this.updateNodeState(executionId, nodeId, 'completed', result);
+
+      // Execute next nodes
+      for (const nextNodeId of node.connections) {
+        await this.executeNode(executionId, nextNodeId, nodes);
+      }
+
+    } catch (error) {
+      await this.updateNodeState(executionId, nodeId, 'failed', null, error.message);
+      throw error;
+    }
+  }
+
+  private async updateNodeState(
+    executionId: string,
+    nodeId: string,
+    status: 'running' | 'completed' | 'failed',
+    result?: any,
+    error?: string
+  ): Promise<void> {
+    await NodeStateModel.findOneAndUpdate(
+      { executionId, nodeId },
+      {
+        status,
+        result,
+        error,
+        updatedAt: new Date(),
+        ...(status === 'running' && { startedAt: new Date() }),
+        ...(status === 'completed' && { completedAt: new Date() })
+      },
+      { upsert: true }
+    );
+
+    // Emit real-time update via Socket.io
+    // io.emit(`execution:${executionId}`, { nodeId, status, result });
+  }
+
+  private async callExecutorService(data: any, plan: any): Promise<any> {
+    // HTTP call to Aryan's Flask service or internal Executor
+    const response = await fetch('http://localhost:5001/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data, plan })
+    });
+    return await response.json();
+  }
+}
+
+================================================================================
+MONGODB SCHEMAS
+================================================================================
+
+File: backend-node/src/models/workflow.model.ts
+
+import mongoose, { Schema, Document } from 'mongoose';
+
+export interface IWorkflow extends Document {
+  workflowId: string;
+  name: string;
+  description?: string;
+  nodes: Array<{
+    id: string;
+    type: string;
+    position: { x: number; y: number };
+    data: any;
+  }>;
+  connections: Array<{
+    source: string;
+    target: string;
+    sourceHandle?: string;
+    targetHandle?: string;
+  }>;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const WorkflowSchema: Schema = new Schema({
+  workflowId: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  description: { type: String },
+  nodes: [{
+    id: String,
+    type: String,
+    position: {
+      x: Number,
+      y: Number
+    },
+    data: Schema.Types.Mixed
+  }],
+  connections: [{
+    source: String,
+    target: String,
+    sourceHandle: String,
+    targetHandle: String
+  }],
+  createdBy: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+export default mongoose.model<IWorkflow>('Workflow', WorkflowSchema);
+
+================================================================================
+API ROUTES (Express)
+================================================================================
+
+File: backend-node/src/routes/workflow.routes.ts
+
+import { Router } from 'express';
+import { WorkflowController } from '../controllers/workflow.controller';
+
+const router = Router();
+const controller = new WorkflowController();
+
+// Workflow CRUD
+router.post('/', controller.createWorkflow);
+router.get('/', controller.getWorkflows);
+router.get('/:id', controller.getWorkflow);
+router.put('/:id', controller.updateWorkflow);
+router.delete('/:id', controller.deleteWorkflow);
+
+// Execution
+router.post('/:id/execute', controller.executeWorkflow);
+router.get('/:id/executions', controller.getExecutions);
+
+export default router;
+
+================================================================================
+DELIVERABLES & TIMELINE
+================================================================================
+
+Week 1-2: Architecture & Setup
+- [ ] Finalize tech stack with team
+- [ ] Set up project repository
+- [ ] MongoDB schema design
+- [ ] Groq API integration setup
+
+Week 3: Planner Agent
+- [ ] Implement PlannerAgent class
+- [ ] Test with sample goals
+- [ ] API endpoint for planning
+
+Week 4: Critic Agent + Workflow Engine
+- [ ] Implement CriticAgent class
+- [ ] Build WorkflowEngine (node orchestrator)
+- [ ] Node state management
+
+Week 5: Integration
+- [ ] Connect with Aryan's Executor
+- [ ] Socket.io for real-time updates
+- [ ] Frontend API integration
+
+Week 6: Testing & Refinement
+- [ ] End-to-end workflow testing
+- [ ] Error handling & retries
+- [ ] Performance optimization
+
+Week 7: Deployment
+- [ ] MongoDB Atlas setup
+- [ ] Backend deployment (Render/Railway)
+- [ ] Environment configuration
+
+Week 8: Documentation
+- [ ] API documentation
+- [ ] Final report
+- [ ] Demo preparation
+
+================================================================================
+COORDINATION WITH TEAM
+================================================================================
+
+With Aryan (Backend/Executor):
+- API contract for Executor service
+- MongoDB schema review
+- Flask service integration (if needed)
+- Shared types definition
+
+With Priyanshu (Frontend):
+- React Flow node data structure
+- Real-time execution updates (Socket.io)
+- API response formats
+- UI state management
+
+Daily Standups:
+- Blockers discussion
+- Progress update
+- Next day planning
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+1. GROQ LIMITS: 14,400 requests/day = 600/hour
+   - Implement request caching
+   - Use Mixtral for simple tasks
+   - Monitor usage in Groq dashboard
+
+2. N8N PARALLEL: Our system mimics N8N's visual flow but for AI agents
+   - Nodes = Agents (Planner, Executor, Critic)
+   - Edges = Data flow between agents
+   - Execution = Sequential with branching support
+
+3. SCALABILITY:
+   - WorkflowEngine supports async execution
+   - MongoDB for persistence
+   - Socket.io for real-time updates
+
+4. ERROR HANDLING:
+   - Each node has retry logic (3 attempts)
+   - Failed nodes don't block entire workflow (configurable)
+   - Detailed logging with Winston
+
+================================================================================
