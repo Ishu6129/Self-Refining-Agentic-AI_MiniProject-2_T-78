@@ -1,0 +1,1186 @@
+================================================================================
+FRONTEND DEVELOPER - PRIYANSHU NAYAK
+Agentic AI Project T-78: Cloud-Deployed Self-Relining Agentic AI
+N8N-Style Visual Workflow Builder
+================================================================================
+
+ROLE: Frontend Developer + UI/UX Designer + React Specialist
+ASSIGNED MODULES:
+1. Visual Workflow Editor (N8N-style node-based canvas)
+2. Node Palette & Components (Planner, Executor, Critic, Memory, Custom)
+3. Property Panel (Node configuration sidebar)
+4. Execution Visualization (Real-time status, logs, results)
+5. Dashboard & Navigation
+
+RESPONSIBILITIES:
+- Build React Flow-based visual workflow editor
+- Design N8N-inspired UI with Tailwind CSS
+- Create reusable node components for each agent type
+- Implement drag-and-drop node palette
+- Build property panel for node configuration
+- Real-time execution visualization with Socket.io
+- Responsive design (desktop-first, tablet support)
+- API integration with backend (Axios)
+- State management (Zustand or Redux Toolkit)
+
+================================================================================
+TECH STACK
+================================================================================
+
+Core:
+- React 18 + TypeScript
+- Vite (build tool)
+- Tailwind CSS (styling)
+- shadcn/ui (component library)
+
+Workflow Visualization:
+- React Flow (node-based editor) - https://reactflow.dev
+
+State Management:
+- Zustand (lightweight) or Redux Toolkit
+
+HTTP Client:
+- Axios
+
+Real-time:
+- Socket.io-client
+
+Routing:
+- React Router DOM
+
+Icons:
+- Lucide React
+
+Forms:
+- React Hook Form + Zod (validation)
+
+================================================================================
+DESIGN SYSTEM (N8N-Inspired)
+================================================================================
+
+Color Palette:
+- Background: #F8FAFC (slate-50)
+- Canvas: #FFFFFF
+- Sidebar: #F1F5F9 (slate-100)
+- Border: #E2E8F0 (slate-200)
+- Text Primary: #0F172A (slate-900)
+- Text Secondary: #64748B (slate-500)
+
+Node Colors (match agent types):
+- Planner: #F59E0B (Amber-500) 🎯
+- Executor: #3B82F6 (Blue-500) ⚡
+- Critic: #EF4444 (Red-500) 🔍
+- Memory: #8B5CF6 (Violet-500) 💾
+- Custom: #10B981 (Emerald-500) ⚙️
+
+Status Colors:
+- Running: #3B82F6 (Blue)
+- Success: #22C55E (Green)
+- Failed: #EF4444 (Red)
+- Waiting: #F59E0B (Amber)
+
+================================================================================
+GROQ SETUP (FOR TESTING)
+================================================================================
+
+STEP 1: GET API KEY
+-------------------
+1. https://console.groq.com → Sign up → Create API Key
+2. You need this to test the full integration
+
+STEP 2: PROJECT SETUP
+---------------------
+cd T78-AgenticAI
+
+# Create React app with Vite
+npm create vite@latest frontend -- --template react-ts
+cd frontend
+
+# Install dependencies
+npm install
+
+# Install all required packages
+npm install reactflow axios socket.io-client zustand react-router-dom lucide-react
+npm install -D tailwindcss postcss autoprefixer @types/node
+npm install @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-tabs
+npm install react-hook-form zod @hookform/resolvers
+npm install date-fns clsx tailwind-merge
+
+# Initialize Tailwind
+npx tailwindcss init -p
+
+STEP 3: TAILWIND CONFIG
+-----------------------
+File: tailwind.config.js
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // N8N-inspired palette
+        canvas: '#F8FAFC',
+        sidebar: '#F1F5F9',
+        node: {
+          planner: '#F59E0B',
+          executor: '#3B82F6',
+          critic: '#EF4444',
+          memory: '#8B5CF6',
+          custom: '#10B981',
+        }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+    },
+  },
+  plugins: [],
+}
+
+STEP 4: GLOBAL STYLES
+---------------------
+File: src/index.css
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-canvas text-slate-900 antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .node-container {
+    @apply rounded-lg border-2 shadow-md transition-all duration-200;
+    min-width: 180px;
+  }
+  
+  .node-header {
+    @apply px-3 py-2 rounded-t-md font-semibold text-white text-sm flex items-center gap-2;
+  }
+  
+  .node-body {
+    @apply p-3 bg-white rounded-b-md text-xs text-slate-600;
+  }
+  
+  .handle {
+    @apply w-3 h-3 rounded-full border-2 border-white shadow-sm;
+  }
+}
+
+================================================================================
+FOLDER STRUCTURE (Your Domain)
+================================================================================
+
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── nodes/                    # Node Type Components
+│   │   │   ├── BaseNode.tsx          # Abstract base node
+│   │   │   ├── PlannerNode.tsx       # 🎯
+│   │   │   ├── ExecutorNode.tsx      # ⚡
+│   │   │   ├── CriticNode.tsx        # 🔍
+│   │   │   ├── MemoryNode.tsx        # 💾
+│   │   │   └── CustomNode.tsx        # ⚙️
+│   │   │
+│   │   ├── workflow/                 # Workflow Editor Components
+│   │   │   ├── FlowEditor.tsx        # Main canvas (React Flow)
+│   │   │   ├── NodePalette.tsx       # Left sidebar (N8N-style)
+│   │   │   ├── PropertyPanel.tsx     # Right sidebar (node config)
+│   │   │   ├── ExecutionPanel.tsx    # Bottom panel (logs/status)
+│   │   │   ├── MiniMap.tsx           # Canvas overview
+│   │   │   └── Controls.tsx          # Zoom/fit controls
+│   │   │
+│   │   ├── ui/                       # shadcn/ui Components
+│   │   │   ├── Button.tsx
+│   │   │   ├── Input.tsx
+│   │   │   ├── Select.tsx
+│   │   │   ├── Dialog.tsx
+│   │   │   ├── Tabs.tsx
+│   │   │   └── Card.tsx
+│   │   │
+│   │   └── layout/                   # Layout Components
+│   │       ├── Header.tsx
+│   │       ├── Sidebar.tsx
+│   │       └── MainLayout.tsx
+│   │
+│   ├── hooks/                        # Custom React Hooks
+│   │   ├── useWorkflow.ts            # Workflow CRUD
+│   │   ├── useExecution.ts           # Execution management
+│   │   ├── useSocket.ts              # Real-time updates
+│   │   └── useNodes.ts               # Node operations
+│   │
+│   ├── stores/                       # Zustand Stores
+│   │   ├── workflowStore.ts          # Workflow state
+│   │   ├── executionStore.ts         # Execution state
+│   │   └── uiStore.ts                # UI state (sidebar, etc.)
+│   │
+│   ├── services/                     # API Services
+│   │   ├── api.ts                    # Axios instance
+│   │   ├── workflow.service.ts
+│   │   ├── execution.service.ts
+│   │   └── agent.service.ts
+│   │
+│   ├── types/                        # TypeScript Types
+│   │   ├── workflow.types.ts
+│   │   ├── node.types.ts
+│   │   └── execution.types.ts
+│   │
+│   ├── utils/                        # Utilities
+│   │   ├── nodeHelpers.ts
+│   │   ├── formatters.ts
+│   │   └── validators.ts
+│   │
+│   ├── App.tsx                       # Main App
+│   ├── main.tsx                      # Entry point
+│   └── index.css                     # Global styles
+│
+├── public/                           # Static assets
+├── package.json
+├── tailwind.config.js
+├── tsconfig.json
+└── vite.config.ts
+
+================================================================================
+CORE COMPONENTS (Your Implementation)
+================================================================================
+
+1. FLOW EDITOR (Main Canvas)
+-----------------------------
+File: src/components/workflow/FlowEditor.tsx
+
+import React, { useCallback, useRef } from 'react';
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Connection,
+  Edge,
+  Node,
+  ReactFlowProvider,
+  Panel
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+
+import { PlannerNode } from '../nodes/PlannerNode';
+import { ExecutorNode } from '../nodes/ExecutorNode';
+import { CriticNode } from '../nodes/CriticNode';
+import { MemoryNode } from '../nodes/MemoryNode';
+import { CustomNode } from '../nodes/CustomNode';
+import { NodePalette } from './NodePalette';
+import { PropertyPanel } from './PropertyPanel';
+import { ExecutionPanel } from './ExecutionPanel';
+
+const nodeTypes = {
+  planner: PlannerNode,
+  executor: ExecutorNode,
+  critic: CriticNode,
+  memory: MemoryNode,
+  custom: CustomNode,
+};
+
+interface FlowEditorProps {
+  workflowId?: string;
+}
+
+export const FlowEditor: React.FC<FlowEditorProps> = ({ workflowId }) => {
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNode, setSelectedNode] = React.useState<Node | null>(null);
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      setEdges((eds) => addEdge({
+        ...connection,
+        animated: true,
+        style: { stroke: '#64748B', strokeWidth: 2 }
+      }, eds));
+    },
+    [setEdges]
+  );
+
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+
+      const type = event.dataTransfer.getData('application/reactflow');
+      if (!type) return;
+
+      const position = {
+        x: event.clientX - (reactFlowWrapper.current?.getBoundingClientRect().left || 0),
+        y: event.clientY - (reactFlowWrapper.current?.getBoundingClientRect().top || 0),
+      };
+
+      const newNode: Node = {
+        id: `${type}_${Date.now()}`,
+        type,
+        position,
+        data: { 
+          label: `${type.charAt(0).toUpperCase() + type.slice(1)} Node`,
+          config: {}
+        },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [setNodes]
+  );
+
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    setSelectedNode(node);
+  }, []);
+
+  const updateNodeData = useCallback((nodeId: string, newData: any) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId ? { ...node, data: { ...node.data, ...newData } } : node
+      )
+    );
+  }, [setNodes]);
+
+  return (
+    <div className="flex h-screen w-full">
+      {/* Left Sidebar - Node Palette */}
+      <NodePalette />
+      
+      {/* Main Canvas */}
+      <div className="flex-1 relative" ref={reactFlowWrapper}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+          onNodeClick={onNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          attributionPosition="bottom-left"
+          className="bg-canvas"
+        >
+          <Background color="#CBD5E1" gap={20} size={1} />
+          <Controls className="bg-white shadow-md border border-slate-200" />
+          <MiniMap 
+            nodeColor={(node) => {
+              switch (node.type) {
+                case 'planner': return '#F59E0B';
+                case 'executor': return '#3B82F6';
+                case 'critic': return '#EF4444';
+                case 'memory': return '#8B5CF6';
+                default: return '#10B981';
+              }
+            }}
+            className="bg-white shadow-md border border-slate-200 rounded-lg"
+          />
+          
+          {/* Top Bar */}
+          <Panel position="top-center" className="bg-white shadow-md rounded-lg px-4 py-2 border border-slate-200">
+            <div className="flex items-center gap-4">
+              <h1 className="font-semibold text-slate-800">Workflow Builder</h1>
+              <div className="h-4 w-px bg-slate-300" />
+              <button 
+                className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition"
+                onClick={() => console.log('Save workflow', { nodes, edges })}
+              >
+                Save
+              </button>
+              <button 
+                className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition"
+                onClick={() => console.log('Execute workflow')}
+              >
+                Execute
+              </button>
+            </div>
+          </Panel>
+        </ReactFlow>
+      </div>
+      
+      {/* Right Sidebar - Property Panel */}
+      <PropertyPanel 
+        selectedNode={selectedNode} 
+        onUpdateNode={updateNodeData}
+      />
+      
+      {/* Bottom Panel - Execution Logs */}
+      <ExecutionPanel />
+    </div>
+  );
+};
+
+================================================================================
+
+2. NODE PALETTE (Left Sidebar - N8N Style)
+-------------------------------------------
+File: src/components/workflow/NodePalette.tsx
+
+import React from 'react';
+import { 
+  Target, 
+  Zap, 
+  Search, 
+  Database, 
+  Settings,
+  Plus
+} from 'lucide-react';
+
+interface NodeItemProps {
+  type: string;
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+  description: string;
+}
+
+const NodeItem: React.FC<NodeItemProps> = ({ type, label, icon, color, description }) => {
+  const onDragStart = (event: React.DragEvent) => {
+    event.dataTransfer.setData('application/reactflow', type);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      className="group cursor-move rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-blue-300"
+    >
+      <div className="flex items-center gap-3">
+        <div 
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-white"
+          style={{ backgroundColor: color }}
+        >
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h4 className="font-medium text-slate-900 text-sm">{label}</h4>
+          <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+        </div>
+        <Plus className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition" />
+      </div>
+    </div>
+  );
+};
+
+export const NodePalette: React.FC = () => {
+  const nodeCategories = [
+    {
+      title: 'Core Agents',
+      nodes: [
+        {
+          type: 'planner',
+          label: 'Planner',
+          icon: <Target className="h-5 w-5" />,
+          color: '#F59E0B',
+          description: 'Decomposes goals into sub-tasks'
+        },
+        {
+          type: 'executor',
+          label: 'Executor',
+          icon: <Zap className="h-5 w-5" />,
+          color: '#3B82F6',
+          description: 'Executes tasks (code, analysis, etc.)'
+        },
+        {
+          type: 'critic',
+          label: 'Critic',
+          icon: <Search className="h-5 w-5" />,
+          color: '#EF4444',
+          description: 'Evaluates and provides feedback'
+        }
+      ]
+    },
+    {
+      title: 'Data',
+      nodes: [
+        {
+          type: 'memory',
+          label: 'Memory',
+          icon: <Database className="h-5 w-5" />,
+          color: '#8B5CF6',
+          description: 'Store and retrieve data'
+        }
+      ]
+    },
+    {
+      title: 'Utility',
+      nodes: [
+        {
+          type: 'custom',
+          label: 'Custom',
+          icon: <Settings className="h-5 w-5" />,
+          color: '#10B981',
+          description: 'Custom logic node'
+        }
+      ]
+    }
+  ];
+
+  return (
+    <div className="w-72 bg-sidebar border-r border-slate-200 flex flex-col h-full">
+      <div className="p-4 border-b border-slate-200">
+        <h2 className="font-semibold text-slate-800">Node Palette</h2>
+        <p className="text-xs text-slate-500 mt-1">Drag nodes to canvas</p>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {nodeCategories.map((category) => (
+          <div key={category.title}>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              {category.title}
+            </h3>
+            <div className="space-y-2">
+              {category.nodes.map((node) => (
+                <NodeItem key={node.type} {...node} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="p-4 border-t border-slate-200 bg-slate-50">
+        <p className="text-xs text-slate-500 text-center">
+          Team T-78 • GLA University
+        </p>
+      </div>
+    </div>
+  );
+};
+
+================================================================================
+
+3. PLANNER NODE COMPONENT (Example)
+------------------------------------
+File: src/components/nodes/PlannerNode.tsx
+
+import React, { memo } from 'react';
+import { Handle, Position, NodeProps } from 'reactflow';
+import { Target, Settings } from 'lucide-react';
+
+interface PlannerNodeData {
+  label: string;
+  config: {
+    goal?: string;
+    maxSubtasks?: number;
+    complexity?: 'low' | 'medium' | 'high';
+  };
+  status?: 'idle' | 'running' | 'success' | 'error';
+  executionResult?: any;
+}
+
+export const PlannerNode: React.FC<NodeProps<PlannerNodeData>> = memo(({ 
+  data, 
+  selected 
+}) => {
+  const statusColors = {
+    idle: 'border-slate-200',
+    running: 'border-blue-400 shadow-blue-200',
+    success: 'border-green-400 shadow-green-200',
+    error: 'border-red-400 shadow-red-200'
+  };
+
+  const statusBg = {
+    idle: 'bg-amber-500',
+    running: 'bg-blue-500 animate-pulse',
+    success: 'bg-green-500',
+    error: 'bg-red-500'
+  };
+
+  return (
+    <div className={`node-container ${selected ? 'ring-2 ring-blue-400' : ''} ${statusColors[data.status || 'idle']}`}>
+      {/* Input Handle */}
+      <Handle 
+        type="target" 
+        position={Position.Left} 
+        className="handle !bg-amber-500"
+      />
+      
+      {/* Header */}
+      <div className="node-header bg-amber-500">
+        <Target className="h-4 w-4" />
+        <span>{data.label || 'Planner'}</span>
+        {data.status && (
+          <div className={`ml-auto h-2 w-2 rounded-full ${statusBg[data.status]}`} />
+        )}
+      </div>
+      
+      {/* Body */}
+      <div className="node-body">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Goal:</span>
+            <span className="font-medium truncate max-w-[100px]">
+              {data.config?.goal || 'Not set'}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Max Tasks:</span>
+            <span className="font-medium">{data.config?.maxSubtasks || 5}</span>
+          </div>
+          
+          {data.executionResult && (
+            <div className="mt-2 pt-2 border-t border-slate-100">
+              <span className="text-green-600 text-xs">✓ Plan generated</span>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Output Handle */}
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        className="handle !bg-amber-500"
+      />
+    </div>
+  );
+});
+
+PlannerNode.displayName = 'PlannerNode';
+
+================================================================================
+
+4. PROPERTY PANEL (Right Sidebar)
+----------------------------------
+File: src/components/workflow/PropertyPanel.tsx
+
+import React from 'react';
+import { Node } from 'reactflow';
+import { X, Settings } from 'lucide-react';
+
+interface PropertyPanelProps {
+  selectedNode: Node | null;
+  onUpdateNode: (nodeId: string, data: any) => void;
+}
+
+export const PropertyPanel: React.FC<PropertyPanelProps> = ({ 
+  selectedNode, 
+  onUpdateNode 
+}) => {
+  if (!selectedNode) {
+    return (
+      <div className="w-80 bg-white border-l border-slate-200 p-4 flex flex-col h-full">
+        <div className="flex items-center gap-2 mb-4">
+          <Settings className="h-5 w-5 text-slate-400" />
+          <h3 className="font-semibold text-slate-700">Properties</h3>
+        </div>
+        <p className="text-sm text-slate-500 text-center mt-8">
+          Select a node to configure its properties
+        </p>
+      </div>
+    );
+  }
+
+  const handleConfigChange = (key: string, value: any) => {
+    onUpdateNode(selectedNode.id, {
+      config: { ...selectedNode.data.config, [key]: value }
+    });
+  };
+
+  const renderNodeConfig = () => {
+    switch (selectedNode.type) {
+      case 'planner':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Goal Description
+              </label>
+              <textarea
+                value={selectedNode.data.config?.goal || ''}
+                onChange={(e) => handleConfigChange('goal', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                rows={3}
+                placeholder="Enter the goal to decompose..."
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Max Subtasks
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={selectedNode.data.config?.maxSubtasks || 5}
+                onChange={(e) => handleConfigChange('maxSubtasks', parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              />
+            </div>
+          </div>
+        );
+        
+      case 'executor':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Task Type
+              </label>
+              <select
+                value={selectedNode.data.config?.taskType || 'analysis'}
+                onChange={(e) => handleConfigChange('taskType', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              >
+                <option value="coding">Coding</option>
+                <option value="analysis">Analysis</option>
+                <option value="writing">Writing</option>
+                <option value="research">Research</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Task Description
+              </label>
+              <textarea
+                value={selectedNode.data.config?.taskDescription || ''}
+                onChange={(e) => handleConfigChange('taskDescription', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                rows={3}
+                placeholder="Describe the task to execute..."
+              />
+            </div>
+          </div>
+        );
+        
+      default:
+        return (
+          <p className="text-sm text-slate-500">
+            Configuration for {selectedNode.type} node
+          </p>
+        );
+    }
+  };
+
+  return (
+    <div className="w-80 bg-white border-l border-slate-200 flex flex-col h-full">
+      <div className="flex items-center justify-between p-4 border-b border-slate-200">
+        <div className="flex items-center gap-2">
+          <Settings className="h-5 w-5 text-slate-600" />
+          <h3 className="font-semibold text-slate-800">Properties</h3>
+        </div>
+        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+          {selectedNode.type}
+        </span>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Node Name
+          </label>
+          <input
+            type="text"
+            value={selectedNode.data.label}
+            onChange={(e) => onUpdateNode(selectedNode.id, { label: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+          />
+        </div>
+        
+        {renderNodeConfig()}
+      </div>
+      
+      <div className="p-4 border-t border-slate-200 bg-slate-50">
+        <div className="text-xs text-slate-500">
+          <p>Node ID: {selectedNode.id}</p>
+          <p>Position: {Math.round(selectedNode.position.x)}, {Math.round(selectedNode.position.y)}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+================================================================================
+
+5. EXECUTION PANEL (Bottom Panel - N8N Style)
+----------------------------------------------
+File: src/components/workflow/ExecutionPanel.tsx
+
+import React, { useState } from 'react';
+import { 
+  Play, 
+  Square, 
+  RotateCcw, 
+  ChevronUp, 
+  ChevronDown,
+  CheckCircle,
+  XCircle,
+  Loader2
+} from 'lucide-react';
+
+interface ExecutionLog {
+  id: string;
+  nodeId: string;
+  nodeType: string;
+  status: 'running' | 'success' | 'error';
+  message: string;
+  timestamp: Date;
+  duration?: number;
+}
+
+export const ExecutionPanel: React.FC = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'logs' | 'output'>('logs');
+  
+  // Mock data - replace with actual execution logs
+  const logs: ExecutionLog[] = [
+    {
+      id: '1',
+      nodeId: 'planner_1',
+      nodeType: 'planner',
+      status: 'success',
+      message: 'Generated plan with 5 subtasks',
+      timestamp: new Date(),
+      duration: 1200
+    },
+    {
+      id: '2',
+      nodeId: 'executor_1',
+      nodeType: 'executor',
+      status: 'running',
+      message: 'Executing task: Research requirements',
+      timestamp: new Date()
+    }
+  ];
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'running':
+        return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div 
+      className={`fixed bottom-0 left-72 right-80 bg-white border-t border-slate-200 shadow-lg transition-all duration-300 ${
+        isExpanded ? 'h-64' : 'h-10'
+      }`}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 h-10 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-slate-900"
+          >
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            Execution
+          </button>
+          
+          <div className="h-4 w-px bg-slate-300" />
+          
+          <div className="flex items-center gap-2">
+            <button className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600">
+              <Play className="h-3 w-3" />
+              Run
+            </button>
+            <button className="flex items-center gap-1 px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">
+              <Square className="h-3 w-3" />
+              Stop
+            </button>
+            <button className="flex items-center gap-1 px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs hover:bg-slate-300">
+              <RotateCcw className="h-3 w-3" />
+              Retry
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">Status:</span>
+          <span className="text-xs font-medium text-green-600">Ready</span>
+        </div>
+      </div>
+      
+      {/* Content */}
+      {isExpanded && (
+        <div className="h-54 flex">
+          {/* Tabs */}
+          <div className="w-32 border-r border-slate-200 bg-slate-50">
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`w-full px-4 py-2 text-left text-sm ${
+                activeTab === 'logs' ? 'bg-white text-blue-600 border-l-2 border-blue-600' : 'text-slate-600'
+              }`}
+            >
+              Logs
+            </button>
+            <button
+              onClick={() => setActiveTab('output')}
+              className={`w-full px-4 py-2 text-left text-sm ${
+                activeTab === 'output' ? 'bg-white text-blue-600 border-l-2 border-blue-600' : 'text-slate-600'
+              }`}
+            >
+              Output
+            </button>
+          </div>
+          
+          {/* Log Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {activeTab === 'logs' ? (
+              <div className="space-y-2">
+                {logs.map((log) => (
+                  <div 
+                    key={log.id}
+                    className="flex items-start gap-3 p-2 rounded hover:bg-slate-50"
+                  >
+                    {getStatusIcon(log.status)}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm text-slate-800">
+                          {log.nodeType}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {log.timestamp.toLocaleTimeString()}
+                        </span>
+                        {log.duration && (
+                          <span className="text-xs text-slate-400">
+                            ({log.duration}ms)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-600">{log.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="font-mono text-sm text-slate-700">
+                <pre>{JSON.stringify({ status: 'waiting', result: null }, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+================================================================================
+STATE MANAGEMENT (Zustand)
+================================================================================
+
+File: src/stores/workflowStore.ts
+
+import { create } from 'zustand';
+import { Node, Edge } from 'reactflow';
+
+interface WorkflowState {
+  nodes: Node[];
+  edges: Edge[];
+  selectedNode: Node | null;
+  workflowName: string;
+  isExecuting: boolean;
+  
+  // Actions
+  setNodes: (nodes: Node[]) => void;
+  setEdges: (edges: Edge[]) => void;
+  addNode: (node: Node) => void;
+  updateNode: (id: string, data: any) => void;
+  removeNode: (id: string) => void;
+  setSelectedNode: (node: Node | null) => void;
+  setWorkflowName: (name: string) => void;
+  setIsExecuting: (executing: boolean) => void;
+}
+
+export const useWorkflowStore = create<WorkflowState>((set) => ({
+  nodes: [],
+  edges: [],
+  selectedNode: null,
+  workflowName: 'Untitled Workflow',
+  isExecuting: false,
+  
+  setNodes: (nodes) => set({ nodes }),
+  setEdges: (edges) => set({ edges }),
+  addNode: (node) => set((state) => ({ nodes: [...state.nodes, node] })),
+  updateNode: (id, data) => set((state) => ({
+    nodes: state.nodes.map((n) => n.id === id ? { ...n, data: { ...n.data, ...data } } : n)
+  })),
+  removeNode: (id) => set((state) => ({
+    nodes: state.nodes.filter((n) => n.id !== id),
+    edges: state.edges.filter((e) => e.source !== id && e.target !== id)
+  })),
+  setSelectedNode: (node) => set({ selectedNode: node }),
+  setWorkflowName: (name) => set({ workflowName: name }),
+  setIsExecuting: (executing) => set({ isExecuting: executing })
+}));
+
+================================================================================
+API SERVICE (Axios)
+================================================================================
+
+File: src/services/api.ts
+
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+export const api = axios.create({
+  baseURL: API_BASE,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Workflow APIs
+export const workflowApi = {
+  create: (data: any) => api.post('/workflows', data),
+  getAll: () => api.get('/workflows'),
+  getById: (id: string) => api.get(`/workflows/${id}`),
+  update: (id: string, data: any) => api.put(`/workflows/${id}`, data),
+  delete: (id: string) => api.delete(`/workflows/${id}`),
+  execute: (id: string) => api.post(`/workflows/${id}/execute`)
+};
+
+// Execution APIs
+export const executionApi = {
+  getByWorkflow: (workflowId: string) => api.get(`/workflows/${workflowId}/executions`),
+  getStatus: (executionId: string) => api.get(`/executions/${executionId}`)
+};
+
+================================================================================
+MAIN APP ENTRY
+================================================================================
+
+File: src/App.tsx
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ReactFlowProvider } from 'reactflow';
+import { FlowEditor } from './components/workflow/FlowEditor';
+import { Dashboard } from './pages/Dashboard';
+
+function App() {
+  return (
+    <ReactFlowProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/workflow/:id?" element={<FlowEditor />} />
+        </Routes>
+      </Router>
+    </ReactFlowProvider>
+  );
+}
+
+export default App;
+
+================================================================================
+DELIVERABLES & TIMELINE
+================================================================================
+
+Week 1-2: Setup & Design
+- [ ] Initialize React + Vite project
+- [ ] Configure Tailwind CSS
+- [ ] Install React Flow and dependencies
+- [ ] Create design system (colors, typography)
+- [ ] Build component library (shadcn/ui)
+
+Week 3: Core Components
+- [ ] NodePalette component
+- [ ] BaseNode component
+- [ ] PlannerNode, ExecutorNode, CriticNode, MemoryNode
+- [ ] FlowEditor canvas
+
+Week 4: Workflow Features
+- [ ] Drag and drop functionality
+- [ ] Node connections (edges)
+- [ ] PropertyPanel (configuration)
+- [ ] Save/load workflows
+
+Week 5: Execution UI
+- [ ] ExecutionPanel component
+- [ ] Real-time status updates (Socket.io)
+- [ ] Execution logs display
+- [ ] Results visualization
+
+Week 6: Integration
+- [ ] API integration (Axios)
+- [ ] Zustand state management
+- [ ] Error handling
+- [ ] Loading states
+
+Week 7: Polish & Deploy
+- [ ] Responsive design (tablet)
+- [ ] Animations and transitions
+- [ ] Vercel deployment
+- [ ] Performance optimization
+
+Week 8: Testing & Docs
+- [ ] Component testing
+- [ ] E2E testing
+- [ ] User documentation
+- [ ] Final demo preparation
+
+================================================================================
+COORDINATION WITH TEAM
+================================================================================
+
+With Ishu (Team Leader):
+- [ ] Review node data structure
+- [ ] API contract for workflow save/load
+- [ ] Execution status events (Socket.io)
+- [ ] Node type definitions
+
+With Aryan (Backend):
+- [ ] API endpoint specifications
+- [ ] Request/response formats
+- [ ] Error handling patterns
+- [ ] CORS configuration
+
+Daily Tasks:
+- [ ] Pull latest changes from GitHub
+- [ ] Test API integrations
+- [ ] Update UI based on feedback
+- [ ] Report bugs/issues
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+1. React Flow Documentation: https://reactflow.dev/docs
+2. N8N Reference: Study https://n8n.io for UI patterns
+3. Always use TypeScript for type safety
+4. Test on Chrome and Firefox
+5. Mobile responsive is NOT priority (desktop-first)
+6. Use Lucide icons consistently
+7. Keep node colors consistent with agent types
+
+GROQ TESTING:
+- Use your API key to test real agent responses
+- Build UI states for: idle, running, success, error
+- Test with long outputs (scrolling)
+- Verify JSON formatting display
+
+N8N DESIGN PATTERNS TO FOLLOW:
+- Left sidebar: Node palette (draggable)
+- Center: Canvas (React Flow)
+- Right sidebar: Properties panel
+- Bottom: Execution logs (collapsible)
+- Top: Toolbar with save/run buttons
+
+================================================================================
