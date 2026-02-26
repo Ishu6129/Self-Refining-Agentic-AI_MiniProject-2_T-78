@@ -1,8 +1,11 @@
 # dependencies
 node_modules/
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> a12164ead32b6b09630efb991cfff6dffabf8d91
 # logs
 *.log
 
