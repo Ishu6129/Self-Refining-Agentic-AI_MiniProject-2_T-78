@@ -71,12 +71,6 @@ PRE-OUTPUT CHECK (silent — never shown)
 □ Zero commentary in Final Output
 `;
 
-export async function executorAgent(task: string) {
-	const prompt = `${EXECUTOR_SYSTEM_PROMPT}
-
-Task To Execute:
-${task}`;
-
-	const response = await chatText(prompt);
-	return response;
+export async function executorAgent(plan: string) {
+  return await chatText(EXECUTOR_SYSTEM_PROMPT, plan, 0.1);
 }

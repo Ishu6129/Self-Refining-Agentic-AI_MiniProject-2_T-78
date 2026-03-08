@@ -90,10 +90,5 @@ PRE-OUTPUT INTERNAL CHECK (silent — never shown to user)
 `;
 
 export async function plannerAgent(userQuery: string) {
- const prompt = `${PLANNER_SYSTEM_PROMPT}
-
-User Task:
-${userQuery}`;
-
- return await chatText(prompt);
+  return await chatText(PLANNER_SYSTEM_PROMPT, userQuery, 0.3);
 }
