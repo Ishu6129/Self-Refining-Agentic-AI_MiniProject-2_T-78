@@ -1,4 +1,4 @@
-import { chatText } from "./base.agent";
+import { chatText } from './base.agent';
 
 const MEMORY_SYSTEM_PROMPT = `
 You are the Memory Agent in a multi-agent AI system. Your sole function
@@ -73,13 +73,8 @@ PRE-OUTPUT INTERNAL CHECK (silent — never shown to user)
 □ No critique
 □ Atomic memory items only
 □ Used exact schema or "No memory update."
-`;
+`.trim();
 
 export async function memoryAgent(conversationText: string) {
-  const prompt = `${MEMORY_SYSTEM_PROMPT}
-
-Conversation:
-${conversationText}`;
-
-  return await chatText(prompt);
+  return await chatText(MEMORY_SYSTEM_PROMPT, conversationText, 0.1);
 }
