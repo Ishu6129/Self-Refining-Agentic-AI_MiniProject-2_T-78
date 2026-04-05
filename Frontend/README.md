@@ -87,7 +87,7 @@ The system simulates an **agentic reasoning pipeline** consisting of planner, ex
 
 ## 📁 Project Structure
 
-\`\`\`bash
+```bash
 agentic-ai-frontend/
 │
 ├── public/
@@ -117,7 +117,7 @@ agentic-ai-frontend/
 ├── package.json
 ├── tailwind.config.js
 └── postcss.config.js
-\`\`\`
+```
 
 ---
 
@@ -125,22 +125,22 @@ agentic-ai-frontend/
 
 ### 1️⃣ Clone Repository
 
-\`\`\`bash
+```bash
 git clone <your-repo-url>
 cd agentic-ai-frontend
-\`\`\`
+```
 
 ### 2️⃣ Install Dependencies
 
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 ### 3️⃣ Start Development Server
 
-\`\`\`bash
+```bash
 npm start
-\`\`\`
+```
 
 Application runs at: **http://localhost:3000**
 
@@ -155,15 +155,15 @@ Application runs at: **http://localhost:3000**
 5. View real-time **Execution Logs**
 
 **Execution Flow:**
-\`\`\`
+```
 Input → Planner → Executor → Critic → Memory → Output
-\`\`\`
+```
 
 ---
 
 ## 💾 Local Storage
 
-The application persists the following data in the browser's \`localStorage\`:
+The application persists the following data in the browser's `localStorage`:
 
 - Workflow state
 - User settings
