@@ -1,0 +1,13 @@
+{
+  "name": "agentic-ai-frontend-t78",
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "installCommand": "npm install",
+  "framework": "create-react-app",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://agentic-ai-backend-t78.onrender.com"
+  }
+}
