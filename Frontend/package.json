@@ -6,7 +6,7 @@
 "author": "Priyanshu Nayak <2315510154>",
 
 "engines": {
-"node": "18.x"
+"node": "24.x"
 },
 
 "dependencies": {
