@@ -47,7 +47,7 @@ export const useWorkflowStore = create((set, get) => ({
 
   // ── Real execution: calls backend pipeline ─────────────────────────────────
   executeWorkflow: async () => {
-    const { nodes, edges, addLog, setNodeStatus, setExecutingNode } = get();
+    const { nodes, addLog, setNodeStatus, setExecutingNode } = get();
 
     set({ isExecuting: true, lastResult: null });
     addLog('Starting workflow execution...', 'info');
@@ -68,8 +68,6 @@ export const useWorkflowStore = create((set, get) => ({
     }
 
     // ── Animate nodes in order: input → planner → executor → critic → memory → output
-    const nodeOrder = ['input', 'planner', 'executor', 'critic', 'memory', 'output'];
-
     const animateNode = async (type, logMsg, logType = 'info') => {
       const node = nodes.find((n) => n.data.type === type);
       if (!node) return;

@@ -12,7 +12,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import CustomNode from './CustomNode';
 import { useWorkflowStore } from '../../store/workflowStore';
-import { Sparkles, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 
 const nodeTypes = { custom: CustomNode };
 

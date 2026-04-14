@@ -16,11 +16,6 @@ const timeAgo = (iso) => {
   return `${Math.floor(diff / 3600)}h ago`;
 };
 
-const duration = (iso) => {
-  // We don't track duration in the backend, so just show timestamp
-  return new Date(iso).toLocaleTimeString();
-};
-
 // ── Expandable execution card ─────────────────────────────────────────────────
 const ExecutionCard = ({ exec }) => {
   const [expanded, setExpanded] = useState(false);
