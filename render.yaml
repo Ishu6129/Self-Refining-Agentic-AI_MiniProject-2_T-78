@@ -1,0 +1,25 @@
+# ─── Render Blueprint ─────────────────────────────────────────────────────────
+# Drop this file at the repository root.
+# In Render dashboard: New > Blueprint > point to your repo.
+# Then set the secret env var GROQ_API_KEY manually in the service dashboard.
+
+services:
+  - type: web
+    name: agentic-ai-backend-t78
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: GROQ_API_KEY
+        sync: false          # ← set this manually in the Render dashboard
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      # Optional: uncomment and set your custom frontend domain
+      # - key: FRONTEND_URL
+      #   value: https://your-app.vercel.app
+    healthCheckPath: /
