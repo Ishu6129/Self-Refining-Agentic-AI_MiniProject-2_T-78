@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import NodePalette from '../../components/NodePalette/NodePalette';
 import WorkflowCanvas from '../../components/WorkflowCanvas/WorkflowCanvas';
 import ExecutionLog from '../../components/ExecutionLog/ExecutionLog';
 
@@ -8,7 +7,6 @@ const WorkflowBuilder = () => {
 
   return (
     <div className="flex h-full">
-      <NodePalette />
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex overflow-hidden">
           <WorkflowCanvas />

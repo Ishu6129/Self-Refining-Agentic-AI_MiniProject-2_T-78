@@ -10,7 +10,7 @@ const Layout = ({ children }) => {
       <Sidebar isOpen={sidebarOpen} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 min-h-0 overflow-auto">
           {children}
         </main>
       </div>

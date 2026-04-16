@@ -1,14 +1,15 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Workflow, LayoutDashboard, Database, History, Settings, Cpu, Users } from 'lucide-react';
+import { Home, LayoutDashboard, Database, History, Settings, Cpu, Users } from 'lucide-react';
 
 const Sidebar = ({ isOpen }) => {
   const menuItems = [
-    { path: '/', icon: Workflow, label: 'Workflow Builder' },
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/memory', icon: Database, label: 'Memory Store' },
-    { path: '/history', icon: History, label: 'Execution History' },
-    { path: '/settings', icon: Settings, label: 'Settings' },
+    { path: '/', icon: Home, label: 'Home' },
+    { path: '/workspace', icon: LayoutDashboard, label: 'Workspace' },
+    { path: '/dashboard', icon: Database, label: 'Dashboard' },
+    { path: '/memory', icon: History, label: 'Memory Store' },
+    { path: '/history', icon: Settings, label: 'Execution History' },
+    { path: '/how-it-works', icon: Users, label: 'How It Works' },
   ];
 
   return (
@@ -41,19 +42,6 @@ const Sidebar = ({ isOpen }) => {
           </NavLink>
         ))}
       </nav>
-
-      <div className="p-4 border-t border-dark-700">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="w-8 h-8 bg-dark-700 rounded-full flex items-center justify-center">
-            <Users className="w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Priyanshu Nayak</p>
-            <p className="text-xs text-gray-400">Frontend Developer</p>
-            <p className="text-xs text-gray-500">Roll: 2315510154</p>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 };
