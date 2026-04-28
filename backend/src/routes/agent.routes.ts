@@ -5,17 +5,19 @@ const router = Router();
 
 // ─── POST /agent/goal ─────────────────────────────────────────────────────────
 router.post('/goal', async (req: Request, res: Response): Promise<void> => {
-  const { goal } = req.body as { goal?: string };
+  const { goal, groqApiKey } = req.body as { goal?: string; groqApiKey?: string };
 
   if (!goal || typeof goal !== 'string' || goal.trim().length < 5) {
     res.status(400).json({ error: 'Please provide a valid goal (at least 5 characters).' });
     return;
   }
 
-  console.log(`[API] New goal received: "${goal.substring(0, 60)}..."`);
+  // Use custom key if provided, else pipeline falls back to env key
+  const apiKey = groqApiKey && groqApiKey.trim() ? groqApiKey.trim() : undefined;
+  console.log(`[API] New goal received: "${goal.substring(0, 60)}..." | Key: ${apiKey ? 'custom' : 'system'}`);
 
   try {
-    const result = await runPipeline(goal.trim());
+    const result = await runPipeline(goal.trim(), apiKey);
     res.status(200).json({ success: true, data: result });
   } catch (err: any) {
     console.error('[API] Pipeline error:', err.message);

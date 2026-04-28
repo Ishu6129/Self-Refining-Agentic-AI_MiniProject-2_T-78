@@ -1,5 +1,7 @@
-import { chatText } from './base.agent';
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.memoryAgent = memoryAgent;
+const base_agent_1 = require("./base.agent");
 const MEMORY_SYSTEM_PROMPT = `
 You are the Memory Agent in a multi-agent AI system. Your sole function
 is to extract, organize, and return memory-worthy information from the conversation.
@@ -64,7 +66,7 @@ OUTPUT SCHEMA — NO DEVIATIONS PERMITTED
 - [Outdated/conflicting memory]
 - None
 `.trim();
-
-export async function memoryAgent(conversationText: string, apiKey?: string) {
-  return await chatText(MEMORY_SYSTEM_PROMPT, conversationText, 0.1, apiKey);
+async function memoryAgent(conversationText, apiKey) {
+    return await (0, base_agent_1.chatText)(MEMORY_SYSTEM_PROMPT, conversationText, 0.1, apiKey);
 }
+//# sourceMappingURL=memory.agent.js.map

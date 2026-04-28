@@ -24,12 +24,12 @@ interface ExecutionRecord {
   iterationsRan: number;
   status: 'success' | 'refined' | 'failed';
   timestamp: string;
+  usedCustomKey: boolean;
 }
 
 // ─── In-Memory Store ──────────────────────────────────────────────────────────
 const executionHistory: Map<string, ExecutionRecord> = new Map();
 
-// FIX: Store memory as structured atomic facts instead of raw markdown blobs.
 let memoryFacts: MemoryFact[] = [];
 let memoryIdCounter = 1;
 
@@ -53,9 +53,6 @@ function extractKeywords(text: string): string[] {
     .filter(w => w.length > 2 && !stopWords.has(w));
 }
 
-/**
- * Parse memory agent markdown (Keep/Update/Remove) into atomic fact strings.
- */
 function parseMemoryMarkdown(markdown: string): string[] {
   const facts: string[] = [];
   const keepSection = markdown.match(/##\s*Keep([\s\S]*?)(?=##|$)/i)?.[1] ?? '';
@@ -68,9 +65,6 @@ function parseMemoryMarkdown(markdown: string): string[] {
   return facts;
 }
 
-/**
- * Add atomic facts to store, deduplicating by keyword Jaccard similarity.
- */
 function addMemoryFacts(newFacts: string[], timestamp: string): void {
   for (const fact of newFacts) {
     const newKw = extractKeywords(fact);
@@ -101,28 +95,27 @@ function getRelevantFacts(goal: string, topN = 5): string[] {
 }
 
 // ─── Pipeline ────────────────────────────────────────────────────────────────
-export async function runPipeline(goal: string): Promise<ExecutionRecord> {
+export async function runPipeline(goal: string, apiKey?: string): Promise<ExecutionRecord> {
   const id        = `exec-${Date.now()}`;
   const timestamp = new Date().toISOString();
+  const usedCustomKey = !!(apiKey && apiKey.trim());
 
-  // ── Step 1 : Retrieve relevant memory + Plan ────────────────────────────────
+  // ── Step 1: Memory retrieval + Plan ──────────────────────────────────────
   console.log(`[PIPELINE ${id}] Step 1 – Memory retrieval + Planner`);
-
-  // FIX: Inject relevant past memory into the planner
   const relevantFacts = getRelevantFacts(goal);
   const memoryContext = relevantFacts.length > 0
     ? `\n\n--- RELEVANT MEMORY FROM PAST SESSIONS ---\n${relevantFacts.map(f => `• ${f}`).join('\n')}\n--- END MEMORY ---`
     : '';
 
-  const plan = await plannerAgent(goal + memoryContext);
+  const plan = await plannerAgent(goal + memoryContext, apiKey);
 
-  // ── Step 2 : Execute ───────────────────────────────────────────────────────
+  // ── Step 2: Execute ────────────────────────────────────────────────────────
   console.log(`[PIPELINE ${id}] Step 2 – Executor`);
-  const executionResult = await executorAgent(plan);
+  const executionResult = await executorAgent(plan, apiKey);
 
-  // ── Step 3 : Critique ──────────────────────────────────────────────────────
+  // ── Step 3: Critique ───────────────────────────────────────────────────────
   console.log(`[PIPELINE ${id}] Step 3 – Critic`);
-  const critique = await criticAgent(goal, plan, executionResult);
+  const critique = await criticAgent(goal, plan, executionResult, apiKey);
 
   let refinedPlan:   string | undefined;
   let refinedResult: string | undefined;
@@ -130,7 +123,7 @@ export async function runPipeline(goal: string): Promise<ExecutionRecord> {
   let finalResult    = executionResult;
   let finalScore     = critique.qualityScore;
 
-  // ── Step 4 : Self-Refinement loop ─────────────────────────────────────────
+  // ── Step 4: Self-Refinement loop ───────────────────────────────────────────
   if (critique.needsRefinement && critique.qualityScore < 90) {
     console.log(`[PIPELINE ${id}] Step 4 – Refinement triggered (score: ${critique.qualityScore})`);
     iterationsRan = 2;
@@ -148,27 +141,26 @@ Improvement Suggestions: ${critique.improvementSuggestions?.join('; ')}
 Refinement Focus: ${critique.refinementFocus}
     `.trim();
 
-    refinedPlan   = await plannerAgent(refinementContext + memoryContext);
-    refinedResult = await executorAgent(refinedPlan);
+    refinedPlan   = await plannerAgent(refinementContext + memoryContext, apiKey);
+    refinedResult = await executorAgent(refinedPlan, apiKey);
     finalResult   = refinedResult;
 
     console.log(`[PIPELINE ${id}] Step 4b – Re-critiquing refined result`);
-    const refinedCritique = await criticAgent(goal, refinedPlan, refinedResult);
+    const refinedCritique = await criticAgent(goal, refinedPlan, refinedResult, apiKey);
     finalScore = refinedCritique.qualityScore;
     console.log(`[PIPELINE ${id}] Refined score: ${finalScore}`);
   }
 
-  // ── Step 5 : Memory Update ─────────────────────────────────────────────────
+  // ── Step 5: Memory Update ──────────────────────────────────────────────────
   console.log(`[PIPELINE ${id}] Step 5 – Memory Agent`);
   const conversationText = `Goal: ${goal}\nPlan: ${plan}\nResult: ${finalResult}\nQuality Score: ${finalScore}`.trim();
-  const memoryUpdate = await memoryAgent(conversationText);
+  const memoryUpdate = await memoryAgent(conversationText, apiKey);
 
   if (memoryUpdate !== 'No memory update.') {
-    // FIX: Parse into atomic facts with deduplication
     addMemoryFacts(parseMemoryMarkdown(memoryUpdate), timestamp);
   }
 
-  // ── Store & Return ─────────────────────────────────────────────────────────
+  // ── Store & Return ──────────────────────────────────────────────────────────
   const record: ExecutionRecord = {
     id, goal, plan, executionResult, critique,
     refinedPlan, refinedResult, memoryUpdate,
@@ -176,6 +168,7 @@ Refinement Focus: ${critique.refinementFocus}
     iterationsRan,
     status: finalScore >= 70 ? (iterationsRan > 1 ? 'refined' : 'success') : 'failed',
     timestamp,
+    usedCustomKey,
   };
   executionHistory.set(id, record);
   return record;

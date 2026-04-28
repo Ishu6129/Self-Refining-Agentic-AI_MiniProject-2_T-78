@@ -1,5 +1,7 @@
-import { chatJSON } from './base.agent';
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.criticAgent = criticAgent;
+const base_agent_1 = require("./base.agent");
 const CRITIC_SYSTEM_PROMPT = `
 You are the Critic Agent in a multi-agent AI system.
 You receive the original goal, the plan steps with statuses, and the execution result.
@@ -73,14 +75,8 @@ Respond ONLY with valid JSON. Zero preamble. Zero markdown. Zero explanation.
   }
 }
 `;
-
-export async function criticAgent(
-  originalGoal: string,
-  planSteps: string,
-  executionResult: string,
-  apiKey?: string,
-) {
-  const userContext = `
+async function criticAgent(originalGoal, planSteps, executionResult, apiKey) {
+    const userContext = `
 Original Goal:
 ${originalGoal}
 
@@ -90,7 +86,7 @@ ${planSteps}
 Execution Result:
 ${executionResult}
 `.trim();
-
-  const result = await chatJSON(CRITIC_SYSTEM_PROMPT, userContext, 0.1, apiKey);
-  return result.critique;
+    const result = await (0, base_agent_1.chatJSON)(CRITIC_SYSTEM_PROMPT, userContext, 0.1, apiKey);
+    return result.critique;
 }
+//# sourceMappingURL=critic.agent.js.map

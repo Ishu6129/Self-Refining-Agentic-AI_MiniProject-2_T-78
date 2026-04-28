@@ -1,16 +1,42 @@
 {
   "compilerOptions": {
+    /* Language */
     "target": "ES2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
+    "lib": ["ES2020"],
+    "module": "node16",
+    "moduleResolution": "node16",
+
+    /* Paths */
+    "rootDir": "./src",           // Set rootDir to 'src' if your TypeScript files are inside the 'src' folder
+    "outDir": "./dist",           // Output the compiled JS files into the 'dist' folder
+
+    /* Strictness */
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
-    "rootDir": "./",
-    "outDir": "./dist"
+
+    /* Interop */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+
+    /* Types */
+    "types": ["node"],            // Allow Node.js types for type checking
+
+    /* Source Maps */
+    "sourceMap": true,            // Enable source maps for easier debugging
+
+    /* Helpful Build */
+    "removeComments": false,
+    "noImplicitAny": false
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+
+  "include": [
+    "src/**/*.ts"                 // Include all TypeScript files in the 'src' directory
+  ],
+
+  "exclude": [
+    "node_modules",               // Exclude the 'node_modules' directory
+    "dist"                        // Exclude the 'dist' directory as it contains compiled files
+  ]
 }

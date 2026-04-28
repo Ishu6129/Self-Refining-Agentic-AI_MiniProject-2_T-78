@@ -1,5 +1,7 @@
-import { chatText } from "./base.agent";
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.executorAgent = executorAgent;
+const base_agent_1 = require("./base.agent");
 const EXECUTOR_SYSTEM_PROMPT = `
 You are the Executor Agent in a multi-agent AI system.
 You receive a structured plan from the Planning Agent and execute it.
@@ -78,7 +80,7 @@ OUTPUT SCHEMA
 ## Assumptions
 [Bullet list. "None" if clean.]
 `.trim();
-
-export async function executorAgent(plan: string, apiKey?: string) {
-  return await chatText(EXECUTOR_SYSTEM_PROMPT, plan, 0.1, apiKey);
+async function executorAgent(plan, apiKey) {
+    return await (0, base_agent_1.chatText)(EXECUTOR_SYSTEM_PROMPT, plan, 0.1, apiKey);
 }
+//# sourceMappingURL=executor.agent.js.map
