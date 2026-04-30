@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const ExecutionSchema = new mongoose_1.default.Schema({
     userId: { type: String, required: true, index: true },
+    id: { type: String, required: true, unique: true },
     goal: String,
     plan: String,
     executionResult: String,

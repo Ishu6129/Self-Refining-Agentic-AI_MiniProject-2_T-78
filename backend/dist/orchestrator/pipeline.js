@@ -13,10 +13,6 @@ const critic_agent_1 = require("../agent/critic.agent");
 const memory_agent_1 = require("../agent/memory.agent");
 const memory_1 = __importDefault(require("../models/memory"));
 const execution_1 = __importDefault(require("../models/execution"));
-// ─── In-Memory Store ──────────────────────────────────────────────────────────
-const executionHistory = new Map();
-let memoryFacts = [];
-let memoryIdCounter = 1;
 // ─── Memory helpers ───────────────────────────────────────────────────────────
 function extractKeywords(text) {
     const stopWords = new Set([

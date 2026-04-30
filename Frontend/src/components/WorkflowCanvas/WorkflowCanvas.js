@@ -49,6 +49,8 @@ const ResultPanel = ({ result, onClose }) => {
   const [section, setSection] = useState('output');
 
   if (!result) return null;
+  const user = JSON.parse(localStorage.getItem('agentic-ai-user') || '{}');
+  const userId = user?.id;
 
   const tabs = [
     { key: 'output', label: 'Final Output' },
@@ -106,7 +108,7 @@ const ResultPanel = ({ result, onClose }) => {
         <div className="flex gap-2 mt-4">
 
           <a
-            href={`${API_BASE}/agent/export/pdf/${result.id}`}
+            href={`${API_BASE}/agent/export/pdf/${userId}/${result.id}`}
             target="_blank"
             rel="noreferrer"
             className="flex-1 text-center px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-all"
@@ -115,7 +117,7 @@ const ResultPanel = ({ result, onClose }) => {
           </a>
 
           <a
-            href={`${API_BASE}/agent/export/docx/${result.id}`}
+            href={`${API_BASE}/agent/export/docx/${userId}/${result.id}`}
             target="_blank"
             rel="noreferrer"
             className="flex-1 text-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-all"

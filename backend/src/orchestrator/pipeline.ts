@@ -31,12 +31,6 @@ interface ExecutionRecord {
   usedCustomKey: boolean;
 }
 
-// ─── In-Memory Store ──────────────────────────────────────────────────────────
-const executionHistory: Map<string, ExecutionRecord> = new Map();
-
-let memoryFacts: MemoryFact[] = [];
-let memoryIdCounter = 1;
-
 // ─── Memory helpers ───────────────────────────────────────────────────────────
 
 function extractKeywords(text: string): string[] {

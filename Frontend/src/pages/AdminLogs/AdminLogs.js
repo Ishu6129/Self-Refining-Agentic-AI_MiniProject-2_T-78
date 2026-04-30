@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export default function AdminLogs() {
   const [logs, setLogs] = useState([]);
@@ -7,7 +8,7 @@ export default function AdminLogs() {
     const user = JSON.parse(localStorage.getItem('agentic-ai-user') || '{}');
     const userId = user?.id;
 
-    fetch(`http://localhost:5000/admin/logs/${userId}`) // ✅ PARAMS
+    fetch(`${API_BASE}/admin/logs/${userId}`) // ✅ PARAMS
       .then(r => r.json())
       .then(d => setLogs(d.data));
   }, []);

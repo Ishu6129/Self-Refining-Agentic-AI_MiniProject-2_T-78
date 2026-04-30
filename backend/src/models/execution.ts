@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const ExecutionSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
-
+  id: { type: String, required: true, unique: true },
   goal: String,
   plan: String,
   executionResult: String,
