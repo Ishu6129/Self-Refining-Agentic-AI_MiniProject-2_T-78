@@ -82,22 +82,21 @@ const Settings = () => {
     setKeyValidating(true);
     setKeyStatus(null);
     setKeyError('');
-    const { user } = useAuthStore();
     const userId = user?.id; 
     try {
-      const res = await fetch(`${settings.apiEndpoint}/agent/status/${userId}`);
-      // We test by POSTing a tiny goal with the key
-      const testRes = await fetch(`${settings.apiEndpoint}/agent/goal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal: 'Say hello', groqApiKey: groqApiKey.trim(), userId: userId }),
+      await fetch(`${settings.apiEndpoint}/agent/status/${userId}`); // ensure backend is up
+      
+      // Simple lightweight check directly against Groq to verify the key
+      const testRes = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${groqApiKey.trim()}` }
       });
-      const data = await testRes.json();
-      if (testRes.ok && data.success) {
+      
+      if (testRes.ok) {
         setKeyStatus('valid');
       } else {
+        const data = await testRes.json();
         setKeyStatus('invalid');
-        setKeyError(data.error || 'Key validation failed.');
+        setKeyError(data.error?.message || 'Key validation failed.');
       }
     } catch (_) {
       setKeyStatus('invalid');

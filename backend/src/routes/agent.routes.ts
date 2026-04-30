@@ -24,12 +24,19 @@ router.post('/goal', async (req: Request, res: Response): Promise<void> => {
   const apiKey = groqApiKey && groqApiKey.trim() ? groqApiKey.trim() : undefined;
   console.log(`[API] New goal received: "${goal.substring(0, 60)}..." | Key: ${apiKey ? 'custom' : 'system'}`);
 
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Transfer-Encoding', 'chunked');
+
   try {
-    const result = await runPipeline(userId, goal.trim(), apiKey);
-    res.status(200).json({ success: true, data: result });
+    const result = await runPipeline(userId, goal.trim(), apiKey, (event) => {
+      res.write(JSON.stringify(event) + '\n');
+    });
+    res.write(JSON.stringify({ event: 'done', data: result }) + '\n');
+    res.end();
   } catch (err: any) {
     console.error('[API] Pipeline error:', err.message);
-    res.status(500).json({ success: false, error: err.message || 'Internal server error during pipeline execution.' });
+    res.write(JSON.stringify({ event: 'error', error: err.message || 'Internal server error during pipeline execution.' }) + '\n');
+    res.end();
   }
 });
 

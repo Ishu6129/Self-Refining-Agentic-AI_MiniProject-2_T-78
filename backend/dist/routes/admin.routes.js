@@ -5,7 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const Log_1 = __importDefault(require("../models/Log"));
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const admin_middleware_1 = require("../middleware/admin.middleware");
 const router = (0, express_1.Router)();
+// Apply protection to all routes in this file
+router.use(auth_middleware_1.authMiddleware);
+router.use(admin_middleware_1.adminMiddleware);
 // ─── GET /admin/logs ──────────────────────────────────────────────────────────
 router.get('/logs', async (req, res) => {
     const { ip, status, method, limit } = req.query;

@@ -12,6 +12,7 @@ const ExecutionSchema = new mongoose_1.default.Schema({
     executionResult: String,
     refinedPlan: String,
     refinedResult: String,
+    critique: mongoose_1.default.Schema.Types.Mixed,
     qualityScore: Number,
     iterationsRan: Number,
     status: String,

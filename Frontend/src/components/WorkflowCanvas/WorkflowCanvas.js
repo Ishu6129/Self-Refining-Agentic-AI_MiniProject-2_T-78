@@ -9,6 +9,7 @@ import ReactFlow, {
   ConnectionMode,
   Panel,
 } from 'reactflow';
+import { useLocation } from 'react-router-dom';
 import 'reactflow/dist/style.css';
 import CustomNode from './CustomNode';
 import { useWorkflowStore } from '../../store/workflowStore';
@@ -17,8 +18,8 @@ import { Sparkles} from 'lucide-react';
 const nodeTypes = { custom: CustomNode };
 
 // ── Default pipeline layout ───────────────────────────────────────────────────
-const DEFAULT_NODES = [
-  { id: 'input-1',    type: 'custom', position: { x: 40,  y: 160 }, data: { type: 'input',    label: 'Input Goal', config: { goal: '' } } },
+const getDefaultNodes = (initialGoal = '') => [
+  { id: 'input-1',    type: 'custom', position: { x: 40,  y: 160 }, data: { type: 'input',    label: 'Input Goal', config: { goal: initialGoal } } },
   { id: 'planner-1',  type: 'custom', position: { x: 360, y: 60  }, data: { type: 'planner',  label: 'Planner',    config: {} } },
   { id: 'executor-1', type: 'custom', position: { x: 680, y: 60  }, data: { type: 'executor', label: 'Executor',   config: {} } },
   { id: 'critic-1',   type: 'custom', position: { x: 680, y: 280 }, data: { type: 'critic',   label: 'Critic',     config: { threshold: '70' } } },
@@ -216,7 +217,10 @@ const ResultPanel = ({ result, onClose }) => {
 // ── Main Canvas ───────────────────────────────────────────────────────────────
 const WorkflowCanvas = () => {
   const reactFlowWrapper = useRef(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES);
+  const location = useLocation();
+  const initialGoal = location.state?.goal || '';
+  
+  const [nodes, setNodes, onNodesChange] = useNodesState(getDefaultNodes(initialGoal));
   const [edges, setEdges, onEdgesChange] = useEdgesState(DEFAULT_EDGES);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [showResult, setShowResult] = useState(false);
@@ -226,6 +230,22 @@ const WorkflowCanvas = () => {
   const setStoreNodes = useWorkflowStore((s) => s.setNodes);
   const setStoreEdges = useWorkflowStore((s) => s.setEdges);
   const lastResult    = useWorkflowStore((s) => s.lastResult);
+  const executeWorkflow = useWorkflowStore((s) => s.executeWorkflow);
+  const isExecuting   = useWorkflowStore((s) => s.isExecuting);
+
+  const hasAttemptedAutoExec = useRef(false);
+
+  // Auto-execute if goal is passed from landing page
+  useEffect(() => {
+    if (initialGoal && !isExecuting && !lastResult && !hasAttemptedAutoExec.current) {
+      hasAttemptedAutoExec.current = true;
+      // Small delay to ensure nodes are synced to store
+      const timer = setTimeout(() => {
+        executeWorkflow();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [initialGoal, executeWorkflow, isExecuting, lastResult]);
 
   // Show result panel when a new result comes in
   useEffect(() => {
@@ -268,7 +288,7 @@ const WorkflowCanvas = () => {
   }, [reactFlowInstance, setNodes]);
 
   const loadDefaultPipeline = () => {
-    setNodes(DEFAULT_NODES.map(n => ({ ...n, data: { ...n.data, config: { ...n.data.config } } })));
+    setNodes(getDefaultNodes('').map(n => ({ ...n, data: { ...n.data, config: { ...n.data.config } } })));
     setEdges(DEFAULT_EDGES);
   };
 

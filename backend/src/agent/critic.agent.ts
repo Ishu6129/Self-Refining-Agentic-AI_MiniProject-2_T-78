@@ -92,5 +92,27 @@ ${executionResult}
 `.trim();
 
   const result = await chatJSON(CRITIC_SYSTEM_PROMPT, userContext, 0.1, apiKey);
-  return result.critique;
+  const critique = result.critique;
+
+  if (critique) {
+    if (typeof critique.qualityScore === 'string') {
+      const strScore = critique.qualityScore as string;
+      if (strScore.includes('/')) {
+        const parts = strScore.split('/');
+        const num = parseFloat(parts[0]);
+        const den = parseFloat(parts[1]);
+        critique.qualityScore = den > 0 ? (num / den) * 100 : 0;
+      } else {
+        critique.qualityScore = parseFloat(strScore) || 0;
+      }
+    }
+
+    if (critique.qualityScore > 0 && critique.qualityScore <= 1) {
+      critique.qualityScore *= 100;
+    }
+
+    critique.qualityScore = Math.max(0, Math.min(100, Math.round(critique.qualityScore || 0)));
+  }
+
+  return critique;
 }

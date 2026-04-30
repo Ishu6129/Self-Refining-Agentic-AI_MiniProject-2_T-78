@@ -50,7 +50,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       success: true,
       message: 'Account created successfully.',
       token,
-      user: { id: user._id, username: user.username, email: user.email },
+      user: { id: user._id, username: user.username, email: user.email, role: user.role },
     });
   } catch (err: any) {
     console.error('[AUTH] Register error:', err.message);
@@ -92,6 +92,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role,
         groqApiKey: user.groqApiKey ? '***stored***' : '',
         useCustomGroqKey: user.useCustomGroqKey,
       },
@@ -118,6 +119,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response): Promi
         id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role,
         groqApiKey: user.groqApiKey ? '***stored***' : '',
         useCustomGroqKey: user.useCustomGroqKey,
       },

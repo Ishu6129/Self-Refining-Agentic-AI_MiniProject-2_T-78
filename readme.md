@@ -47,10 +47,11 @@ User Goal
 |-------|-----------|
 | LLM Backend | [Groq](https://console.groq.com) — `llama-3.3-70b-versatile` (free tier) |
 | Backend Framework | Node.js + TypeScript + Express 5 |
+| Database | MongoDB (Atlas) |
 | Frontend | React 18 + Tailwind CSS + ReactFlow |
 | State Management | Zustand |
-| Cloud (Backend) | Render.com |
-| Cloud (Frontend) | Vercel |
+| Primary Cloud | **AWS (Amazon Web Services)** — EC2 / Load Balanced deployment |
+| Backup Cloud | Render.com (Backend) + Vercel (Frontend) |
 
 ---
 
@@ -59,14 +60,16 @@ User Goal
 ### Prerequisites
 - Node.js ≥ 18
 - Free [Groq API key](https://console.groq.com) (takes 30 seconds to get)
+- Local MongoDB or MongoDB Atlas URI
 
 ### 1. Backend
 
 ```bash
 cd backend
 npm install
-cp .env.example .env          # then open .env and paste your GROQ_API_KEY
-npm run dev
+cp .env.example .env          # then open .env and paste your GROQ_API_KEY and MONGO_URI
+npm run build
+npm start
 ```
 
 Server starts at **http://localhost:5000**
@@ -97,55 +100,71 @@ App opens at **http://localhost:3000**
 ## 📡 REST API Reference
 
 Base URL (local): `http://localhost:5000`
-Base URL (cloud): `https://agentic-ai-backend-t78.onrender.com`
+Base URL (AWS Primary): `http://<aws-ec2-instance-ip>:5000`
+Base URL (Render Backup): `https://agentic-ai-backend-t78.onrender.com`
 
-| Endpoint | Method | Body | Description |
+| Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/` | GET | — | Health check |
-| `/agent/goal` | POST | `{ "goal": "string" }` | Run full pipeline |
-| `/agent/status` | GET | — | System stats |
-| `/agent/history` | GET | — | All past executions |
-| `/agent/memory` | GET | — | Memory store entries |
+| `/auth/register` | POST | — | User registration |
+| `/auth/login` | POST | — | User login & token generation |
+| `/auth/promote` | POST | Master | Promote user to Admin via `masterKey` |
+| `/agent/goal` | POST | User | Run full agentic pipeline (Streamed) |
+| `/agent/status/:id`| GET | User | User-specific statistics |
+| `/agent/history/:id`| GET | User | Past execution history |
+| `/agent/memory/:id` | GET | User | Memory store entries |
+| `/admin/logs` | GET | Admin | Global audit trail & IP telemetry |
+| `/agent/export/pdf/:id` | GET | — | Download PDF Report |
+| `/agent/export/docx/:id` | GET | — | Download DOCX Report |
 
-**Example:**
+---
+
+## 🔒 Security & Administration
+
+The system implements **Role-Based Access Control (RBAC)** to ensure data privacy and system integrity.
+
+### 1. Administrative Promotion
+To create the first admin or recover access, use the secret promotion endpoint with your `MASTER_KEY`:
+
 ```bash
-curl -X POST http://localhost:5000/agent/goal \
+curl -X POST http://localhost:5000/auth/promote \
   -H "Content-Type: application/json" \
-  -d '{"goal": "Create a study plan for learning machine learning"}'
+  -d '{"email": "admin@gmail.com", "masterKey": "t78-admin-override-99"}'
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "exec-1744000000000",
-    "goal": "Create a study plan for learning machine learning",
-    "plan": "# Plan\n## Goal\n...",
-    "executionResult": "# Execution Result\n...",
-    "critique": { "qualityScore": 85, "isSatisfactory": true, ... },
-    "qualityScore": 85,
-    "iterationsRan": 1,
-    "status": "success",
-    "timestamp": "2026-04-12T10:00:00.000Z"
-  }
-}
-```
+### 2. Audit Trail & Monitoring
+Admins have access to a dedicated **Admin Logs** dashboard.
+- **Origin IP Tracking**: Identify user locations and potential security threats.
+- **Latency Monitoring**: Track response times (ms) across all agentic nodes.
+- **HTTP Intelligence**: Click any status code (e.g., 403, 429, 500) to see its technical meaning.
+
+### 3. Data Isolation
+- **Tenant Privacy**: User goals, plans, and memory facts are strictly isolated by `userId`.
+- **JWT Protection**: All agentic routes are protected via JSON Web Tokens with a 7-day expiration.
 
 ---
 
 ## ☁️ Cloud Deployment
 
-### Backend → Render.com (Aryan Pratap)
+### 🌟 Primary Deployment → AWS (Amazon Web Services)
+For high availability, scalability, and performance, the system is primarily deployed on AWS.
+1. **Compute**: Hosted on AWS EC2 instances running PM2 for process management.
+2. **Database**: MongoDB Atlas cluster mapped to the AWS environment.
+3. **Frontend**: Can be served statically via AWS S3 + CloudFront or bundled with the EC2 instance.
+
+### 🛡️ Backup Deployment → Render & Vercel
+As a failover and secondary environment, we utilize Render and Vercel.
+
+**Backup Backend → Render.com**
 1. Push code to GitHub
 2. Go to [render.com](https://render.com) → New → Web Service → connect repo
 3. Render reads `render.yaml` automatically
-4. In dashboard → Environment → add `GROQ_API_KEY`
+4. In dashboard → Environment → add `GROQ_API_KEY` and `MONGO_URI`
 
-### Frontend → Vercel (Priyanshu Nayak)
+**Backup Frontend → Vercel**
 1. Go to [vercel.com](https://vercel.com) → New Project → import repo
 2. Set `Root Directory` to `Frontend`
-3. Add environment variable: `REACT_APP_API_URL` = your Render backend URL
+3. Add environment variable: `REACT_APP_API_URL` = your Render/AWS backend URL
 4. Deploy
 
 ---
@@ -198,28 +217,17 @@ curl -X POST http://localhost:5000/agent/goal \
 
 ---
 
-## ✅ Implementation Status
+## ✅ Implementation Status (Aligned with Project Statement)
 
-| Feature | Status |
-|---------|--------|
-| Planner Agent | ✅ Complete |
-| Executor Agent | ✅ Complete |
-| Critic Agent | ✅ Complete |
-| Memory Agent | ✅ Complete |
-| REST API (goal, status, history, memory) | ✅ Complete |
-| Planner→Executor→Critic→Memory Pipeline | ✅ Complete |
-| Self-Refinement Loop | ✅ Complete |
-| Workflow Builder UI (drag & drop) | ✅ Complete |
-| Goal input on canvas node | ✅ Complete |
-| Live execution log | ✅ Complete |
-| Result side panel | ✅ Complete |
-| Dashboard (live stats) | ✅ Complete |
-| Execution History (expandable) | ✅ Complete |
-| Memory Viewer (live) | ✅ Complete |
-| Cloud deployment config | ✅ Complete |
-| Unit tests | ⏳ Week 8 |
-| Persistent DB (SQLite/PostgreSQL) | ⏳ Future work |
-| Auth / API keys | ⏳ Future work |
+| Core Objective / Requirement | Implementation Details | Status |
+|------------------------------|------------------------|--------|
+| **Autonomous Task Decomposition** | `Planner Agent` converts abstract goals into ordered sub-tasks. | ✅ Complete |
+| **Task Execution Engine** | `Executor Agent` executes decomposed sub-tasks. | ✅ Complete |
+| **Self-Critique Mechanism** | `Critic Agent` evaluates output quality without human supervision. | ✅ Complete |
+| **Planning-Execution-Reflection Loop** | Automated self-refinement loop triggers if quality score < 90. | ✅ Complete |
+| **Long-Term Memory Persistence** | `Memory Agent` stores past plans and critiques in MongoDB. | ✅ Complete |
+| **Cloud Deployment & Observability** | Deployed on AWS/Render with REST API & React Flow visualization. | ✅ Complete |
+| **Document Exporting** | Generates formatted PDF and DOCX Execution Reports. | ✅ Complete |
 
 ---
 

@@ -1,14 +1,18 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, LayoutDashboard, Database, History, Settings, Cpu, Users } from 'lucide-react';
+import { Home, LayoutDashboard, Database, History, Settings, Cpu, Users, Shield } from 'lucide-react';
 
 const Sidebar = ({ isOpen }) => {
+  const user = JSON.parse(localStorage.getItem('agentic-ai-user') || '{}');
+  const isAdmin = user?.role === 'admin';
+
   const menuItems = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/workspace', icon: LayoutDashboard, label: 'Workspace' },
     { path: '/dashboard', icon: Database, label: 'Dashboard' },
     { path: '/memory', icon: History, label: 'Memory Store' },
     { path: '/history', icon: Settings, label: 'Execution History' },
+    ...(isAdmin ? [{ path: '/admin-logs', icon: Shield, label: 'Admin Logs' }] : []),
     { path: '/how-it-works', icon: Users, label: 'How It Works' },
   ];
 

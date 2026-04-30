@@ -67,6 +67,7 @@ OUTPUT SCHEMA — NO DEVIATIONS PERMITTED
 - None
 `.trim();
 async function memoryAgent(conversationText, apiKey) {
-    return await (0, base_agent_1.chatText)(MEMORY_SYSTEM_PROMPT, conversationText, 0.1, apiKey);
+    const result = await (0, base_agent_1.chatText)(MEMORY_SYSTEM_PROMPT, conversationText, 0.1, apiKey);
+    return result;
 }
 //# sourceMappingURL=memory.agent.js.map

@@ -45,7 +45,7 @@ router.post('/register', async (req, res) => {
             success: true,
             message: 'Account created successfully.',
             token,
-            user: { id: user._id, username: user.username, email: user.email },
+            user: { id: user._id, username: user.username, email: user.email, role: user.role },
         });
     }
     catch (err) {
@@ -82,6 +82,7 @@ router.post('/login', async (req, res) => {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                role: user.role,
                 groqApiKey: user.groqApiKey ? '***stored***' : '',
                 useCustomGroqKey: user.useCustomGroqKey,
             },
@@ -108,6 +109,7 @@ router.get('/me', auth_middleware_1.authMiddleware, async (req, res) => {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                role: user.role,
                 groqApiKey: user.groqApiKey ? '***stored***' : '',
                 useCustomGroqKey: user.useCustomGroqKey,
             },

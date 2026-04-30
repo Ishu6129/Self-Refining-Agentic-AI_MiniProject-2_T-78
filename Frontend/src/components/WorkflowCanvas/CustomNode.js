@@ -64,13 +64,24 @@ const CustomNode = ({ data, id, selected }) => {
   const colors = colorMap[data.type] || colorMap.output;
 
   // Use individual selectors to avoid re-rendering on unrelated store changes.
+  const activeNode     = useWorkflowStore((s) => s.activeNode);
   const executingNodes = useWorkflowStore((s) => s.executingNodes);
   const nodeStatuses   = useWorkflowStore((s) => s.nodeStatuses);
   const lastResult     = useWorkflowStore((s) => s.lastResult);
   const { setNodes }   = useReactFlow(); // update ReactFlow local state, not the store directly
 
-  const isExecuting = executingNodes.has(id);
+  const isExecuting = executingNodes.has(id) || activeNode === data.type || activeNode === id;
   const status      = nodeStatuses[id];
+
+  // Dynamic Glow map based on Agent Type
+  const glowMap = {
+    planner: 'rgba(245, 158, 11, 0.7)',  // Amber
+    executor: 'rgba(16, 185, 129, 0.7)', // Emerald
+    critic: 'rgba(239, 68, 68, 0.7)',    // Red
+    memory: 'rgba(168, 85, 247, 0.7)',   // Purple
+    input: 'rgba(59, 130, 246, 0.7)'     // Blue
+  };
+  const activeGlow = glowMap[data.type] || 'rgba(107, 114, 128, 0.7)';
 
   // Local config state
   const [configOpen, setConfigOpen] = useState(data.type === 'input');
@@ -134,7 +145,7 @@ const CustomNode = ({ data, id, selected }) => {
   };
 
   const borderClass =
-    isExecuting          ? 'border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' :
+    isExecuting          ? `border-transparent ring-2 ring-white/20` :
     status === 'completed'? 'border-emerald-500' :
     status === 'failed'   ? 'border-red-500' :
     selected              ? 'border-primary-500' :
@@ -142,7 +153,12 @@ const CustomNode = ({ data, id, selected }) => {
 
   return (
     <div className={`relative ${isExecuting ? 'animate-pulse' : ''}`}>
-      <div className={`w-72 bg-dark-800 rounded-xl border-2 transition-all duration-200 shadow-lg ${borderClass}`}>
+      <div 
+        className={`w-72 bg-dark-800 rounded-xl border-2 transition-all duration-300 shadow-lg ${borderClass}`}
+        style={{
+          boxShadow: isExecuting ? `0 0 25px ${activeGlow}, inset 0 0 10px ${activeGlow}` : undefined
+        }}
+      >
 
         {/* ── Node header ─────────────────────────────────────── */}
         <div

@@ -1,4 +1,5 @@
 import { chatText } from './base.agent';
+import MemoryModel from '../models/memory';
 
 const MEMORY_SYSTEM_PROMPT = `
 You are the Memory Agent in a multi-agent AI system. Your sole function
@@ -65,6 +66,10 @@ OUTPUT SCHEMA — NO DEVIATIONS PERMITTED
 - None
 `.trim();
 
-export async function memoryAgent(conversationText: string, apiKey?: string) {
-  return await chatText(MEMORY_SYSTEM_PROMPT, conversationText, 0.1, apiKey);
+export async function memoryAgent(
+  conversationText: string,
+  apiKey?: string
+) {
+  const result = await chatText(MEMORY_SYSTEM_PROMPT, conversationText, 0.1, apiKey);
+  return result;
 }

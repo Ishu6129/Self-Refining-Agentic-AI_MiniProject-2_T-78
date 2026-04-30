@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const MemorySchema = new mongoose_1.default.Schema({
     userId: { type: String, required: true, index: true },
+    sessionId: { type: String, required: true, index: true },
     fact: String,
     keywords: [String],
     timestamp: { type: Date, default: Date.now }

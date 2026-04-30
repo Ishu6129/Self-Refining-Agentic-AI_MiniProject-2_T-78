@@ -13,6 +13,7 @@ const export_routes_1 = __importDefault(require("./routes/export.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const logger_1 = require("./middleware/logger");
 const app = (0, express_1.default)();
+app.set('trust proxy', true); // Trust the first proxy (Vercel, Render, AWS LB)
 const PORT = Number(process.env.PORT) || 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || '';
 const MONGO_URI = process.env.MONGO_URI || '';
@@ -30,6 +31,12 @@ app.use((0, cors_1.default)({
         if (!origin)
             return callback(null, true);
         if (origin.startsWith('http://localhost'))
+            return callback(null, true);
+        if (origin.startsWith('http://172.'))
+            return callback(null, true);
+        if (origin.startsWith('http://192.168.'))
+            return callback(null, true);
+        if (origin.startsWith('http://10.'))
             return callback(null, true);
         if (origin.endsWith('.vercel.app'))
             return callback(null, true);

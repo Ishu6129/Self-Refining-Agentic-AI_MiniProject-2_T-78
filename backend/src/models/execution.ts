@@ -8,6 +8,7 @@ const ExecutionSchema = new mongoose.Schema({
   executionResult: String,
   refinedPlan: String,
   refinedResult: String,
+  critique: mongoose.Schema.Types.Mixed,
 
   qualityScore: Number,
   iterationsRan: Number,

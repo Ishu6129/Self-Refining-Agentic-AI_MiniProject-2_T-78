@@ -37,6 +37,8 @@ const MemoryViewer = () => {
     setLoading(true);
     setSearchMode(true);
     try {
+      const user = JSON.parse(localStorage.getItem('agentic-ai-user') || '{}');
+      const userId = user?.id;
       const res  = await fetch(`${API_BASE}/agent/memory/search/${userId}?q=${encodeURIComponent(term)}`);
       const json = await res.json();
       if (json.success) setMemoryData(json.data);

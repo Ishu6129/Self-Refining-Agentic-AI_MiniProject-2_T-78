@@ -58,13 +58,14 @@ function parseMemoryMarkdown(markdown) {
 //   }
 //   if (memoryFacts.length > 100) memoryFacts = memoryFacts.slice(-100);
 // }
-async function addMemoryFacts(userId, newFacts, timestamp) {
+async function addMemoryFacts(userId, newFacts, timestamp, sessionId) {
     for (const fact of newFacts) {
         const keywords = extractKeywords(fact);
         if (keywords.length === 0)
             continue;
         await memory_1.default.create({
             userId,
+            sessionId: sessionId || `exec-${Date.now()}`,
             fact,
             keywords
         });
@@ -97,31 +98,42 @@ async function getRelevantFacts(userId, goal, topN = 5) {
         .map(m => m.fact);
 }
 // ─── Pipeline ────────────────────────────────────────────────────────────────
-async function runPipeline(userId, goal, apiKey) {
+async function runPipeline(userId, goal, apiKey, onProgress) {
     const id = `exec-${Date.now()}`;
     const timestamp = new Date().toISOString();
     const usedCustomKey = !!(apiKey && apiKey.trim());
+    const sendProgress = (event, node, message, status = 'success') => {
+        if (onProgress)
+            onProgress({ event, node, message, status });
+    };
     // ── Step 1: Memory retrieval + Plan ──────────────────────────────────────
     console.log(`[PIPELINE ${id}] Step 1 – Memory retrieval + Planner`);
+    sendProgress('node_start', 'planner', '🧠 Planner Agent decomposing goal into sub-tasks...', 'info');
     const relevantFacts = await getRelevantFacts(userId, goal);
     const memoryContext = relevantFacts.length > 0
         ? `\n\n--- RELEVANT MEMORY FROM PAST SESSIONS ---\n${relevantFacts.map(f => `• ${f}`).join('\n')}\n--- END MEMORY ---`
         : '';
     const plan = await (0, planner_agent_1.plannerAgent)(goal + memoryContext, apiKey);
+    sendProgress('node_complete', 'planner', `✅ Plan created with ${(plan.match(/^\d+\./gm) || []).length} steps`, 'success');
     // ── Step 2: Execute ────────────────────────────────────────────────────────
     console.log(`[PIPELINE ${id}] Step 2 – Executor`);
+    sendProgress('node_start', 'executor', '⚙️  Executor Agent running sub-tasks...', 'info');
     const executionResult = await (0, executor_agent_1.executorAgent)(plan, apiKey);
     // ── Step 3: Critique ───────────────────────────────────────────────────────
     console.log(`[PIPELINE ${id}] Step 3 – Critic`);
+    sendProgress('node_start', 'critic', '🔍 Critic Agent evaluating output quality...', 'info');
     const critique = await (0, critic_agent_1.criticAgent)(goal, plan, executionResult, apiKey);
     let refinedPlan;
     let refinedResult;
     let iterationsRan = 1;
     let finalResult = executionResult;
     let finalScore = critique.qualityScore;
+    const critiqueType = finalScore >= 90 ? 'success' : finalScore >= 70 ? 'warning' : 'error';
+    sendProgress('node_complete', 'critic', `${finalScore >= 90 ? '✅' : '⚠️'} Quality score: ${finalScore}/100`, critiqueType);
     // ── Step 4: Self-Refinement loop ───────────────────────────────────────────
     if (critique.needsRefinement && critique.qualityScore < 90) {
         console.log(`[PIPELINE ${id}] Step 4 – Refinement triggered (score: ${critique.qualityScore})`);
+        sendProgress('node_start', 'planner', '🔄 Refinement triggered: Re-planning...', 'warning');
         iterationsRan = 2;
         const refinementContext = `
 ORIGINAL GOAL:
@@ -136,20 +148,28 @@ Improvement Suggestions: ${critique.improvementSuggestions?.join('; ')}
 Refinement Focus: ${critique.refinementFocus}
     `.trim();
         refinedPlan = await (0, planner_agent_1.plannerAgent)(refinementContext + memoryContext, apiKey);
+        sendProgress('node_complete', 'planner', `✅ Refined Plan created`, 'success');
+        sendProgress('node_start', 'executor', '⚙️  Executor running refined tasks...', 'info');
         refinedResult = await (0, executor_agent_1.executorAgent)(refinedPlan, apiKey);
         finalResult = refinedResult;
         console.log(`[PIPELINE ${id}] Step 4b – Re-critiquing refined result`);
+        sendProgress('node_start', 'critic', '🔍 Critic evaluating refined output...', 'info');
         const refinedCritique = await (0, critic_agent_1.criticAgent)(goal, refinedPlan, refinedResult, apiKey);
         finalScore = refinedCritique.qualityScore;
         console.log(`[PIPELINE ${id}] Refined score: ${finalScore}`);
+        const rCritiqueType = finalScore >= 90 ? 'success' : finalScore >= 70 ? 'warning' : 'error';
+        sendProgress('node_complete', 'critic', `${finalScore >= 90 ? '✅' : '⚠️'} Refined Quality score: ${finalScore}/100`, rCritiqueType);
     }
+    sendProgress('node_complete', 'executor', `✅ Execution complete (${iterationsRan} iteration${iterationsRan > 1 ? 's' : ''})`, 'success');
     // ── Step 5: Memory Update ──────────────────────────────────────────────────
     console.log(`[PIPELINE ${id}] Step 5 – Memory Agent`);
+    sendProgress('node_start', 'memory', '💾 Memory Agent storing execution context...', 'info');
     const conversationText = `Goal: ${goal}\nPlan: ${plan}\nResult: ${finalResult}\nQuality Score: ${finalScore}`.trim();
     const memoryUpdate = await (0, memory_agent_1.memoryAgent)(conversationText, apiKey);
     if (memoryUpdate !== 'No memory update.') {
-        await addMemoryFacts(userId, parseMemoryMarkdown(memoryUpdate), timestamp);
+        await addMemoryFacts(userId, parseMemoryMarkdown(memoryUpdate), timestamp, id);
     }
+    sendProgress('node_complete', 'memory', memoryUpdate !== 'No memory update.' ? '✅ Memory updated with key information' : '✅ No new memory entries', 'success');
     // ── Store & Return ──────────────────────────────────────────────────────────
     const record = {
         id, userId, goal, plan, executionResult, critique,

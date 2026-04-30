@@ -91,9 +91,6 @@ export const useWorkflowStore = create((set, get) => ({
     };
 
     try {
-      animateNode('input', `📥 Goal received: "${goal.substring(0, 60)}..."`, 'info');
-      animateNode('planner', '🧠 Planner Agent decomposing goal into sub-tasks...', 'info');
-
       // Get active Groq key (empty string = use system key on backend)
       const groqApiKey = getActiveGroqKey();
       const keyMode = groqApiKey ? 'custom' : 'system';
@@ -102,6 +99,9 @@ export const useWorkflowStore = create((set, get) => ({
       const user = JSON.parse(localStorage.getItem('agentic-ai-user') || '{}');
       const userId = user?.id;
 
+      completeNode('input', '✅ Input goal set', 'success');
+      animateNode('planner', '🧠 Connecting to orchestrator...', 'info');
+
       const response = await fetch(`${API_BASE}/agent/goal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,42 +109,71 @@ export const useWorkflowStore = create((set, get) => ({
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Backend error: ${response.status}`);
+        throw new Error(`Backend error: ${response.status}`);
       }
 
-      const { data: result } = await response.json();
-
-      completeNode('input', '✅ Input node processed', 'success');
-      completeNode('planner', `✅ Plan created with ${(result.plan.match(/^\d+\./gm) || []).length} steps`, 'success');
-
-      animateNode('executor', '⚙️  Executor Agent running sub-tasks...', 'info');
-      completeNode('executor', `✅ Execution complete (${result.iterationsRan} iteration${result.iterationsRan > 1 ? 's' : ''})`, 'success');
-
-      animateNode('critic', '🔍 Critic Agent evaluating output quality...', 'info');
-      const score = result.qualityScore;
-      const critiqueType = score >= 90 ? 'success' : score >= 70 ? 'warning' : 'error';
-      completeNode('critic', `${score >= 90 ? '✅' : '⚠️'} Quality score: ${score}/100`, critiqueType);
-
-      if (result.iterationsRan > 1) {
-        addLog('🔄 Self-refinement loop triggered — re-planning and re-executing...', 'warning');
+      if (!response.body) {
+         throw new Error("ReadableStream not supported by the browser.");
       }
 
-      animateNode('memory', '💾 Memory Agent storing execution context...', 'info');
-      completeNode('memory', result.memoryUpdate !== 'No memory update.'
-        ? '✅ Memory updated with key information'
-        : '✅ No new memory entries (context unchanged)', 'success');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let result = null;
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          let msg;
+          try {
+            msg = JSON.parse(line);
+          } catch (e) {
+            if (e.message !== 'Unexpected end of JSON input') {
+              console.error('Error parsing stream chunk', e, line);
+            }
+            continue;
+          }
+            
+          if (msg.event === 'error') {
+             throw new Error(msg.error);
+          } else if (msg.event === 'node_start') {
+             animateNode(msg.node, msg.message, msg.status || 'info');
+          } else if (msg.event === 'node_complete') {
+             completeNode(msg.node, msg.message, msg.status || 'success');
+          } else if (msg.event === 'done') {
+             result = msg.data;
+          }
+        }
+      }
+
+      if (!result) {
+        throw new Error("Pipeline finished without returning a result.");
+      }
 
       animateNode('output', '📤 Generating final output...', 'info');
       completeNode('output', '✅ Final output ready', 'success');
 
-      addLog(`🎉 Workflow complete! Quality: ${score}/100 | Status: ${result.status.toUpperCase()}`, 'success');
+      addLog(`🎉 Workflow complete! Quality: ${result.qualityScore}/100 | Status: ${result.status.toUpperCase()}`, 'success');
 
       set({ lastResult: result });
       get().fetchStats();
 
     } catch (error) {
-      addLog(`❌ Execution failed: ${error.message}`, 'error');
+      let errorMsg = error.message;
+      if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('rate limit')) {
+        errorMsg = '⚠️ Rate Limit Reached! Your Groq API key has exceeded its limit. Please go to Settings to update your API key or wait a few minutes.';
+      }
+      addLog(`❌ Execution failed: ${errorMsg}`, 'error');
       nodes.forEach((n) => {
         const { nodeStatuses } = get();
         if (nodeStatuses[n.id] === 'running') {

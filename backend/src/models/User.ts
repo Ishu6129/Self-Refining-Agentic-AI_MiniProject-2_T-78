@@ -7,6 +7,7 @@ export interface IUser extends Document {
   password: string;
   groqApiKey?: string;
   useCustomGroqKey: boolean;
+  role: 'admin' | 'user';
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
@@ -41,6 +42,11 @@ const UserSchema = new mongoose.Schema<IUser>(
     useCustomGroqKey: {
       type: Boolean,
       default: false,
+    },
+    role: {
+      type: String,
+      enum: ['admin', 'user'],
+      default: 'user',
     },
   },
   {

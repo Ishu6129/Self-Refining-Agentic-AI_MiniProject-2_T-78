@@ -1,7 +1,13 @@
 import { Router, Request, Response } from 'express';
 import Log from '../models/Log';
+import { authMiddleware } from '../middleware/auth.middleware';
+import { adminMiddleware } from '../middleware/admin.middleware';
 
 const router = Router();
+
+// Apply protection to all routes in this file
+router.use(authMiddleware as any);
+router.use(adminMiddleware as any);
 
 // ─── GET /admin/logs ──────────────────────────────────────────────────────────
 router.get('/logs', async (req: Request, res: Response): Promise<void> => {
