@@ -9,18 +9,12 @@ async function handleToolAction(action) {
     console.log("🛠 Tool Handler Triggered:", action.type);
     try {
         switch (action.type) {
-            case "generate_image": {
-                const res = await (0, tools_1.sendRequest)("generate-image", "POST", {
-                    prompt: action.input,
-                });
-                if (res.error) {
-                    return `Image generation failed: ${res.error}`;
-                }
-                return res.image_url || res.path || "Image generated";
+            case "web_search": {
+                return await (0, tools_1.serperSearch)(action.input);
             }
-            // 👉 future tools can go here directly
-            // case "search_web":
-            //   return await sendRequest("search", "POST", { query: action.input });
+            case "currency_converter": {
+                return await (0, tools_1.getExchangeRate)(action.input);
+            }
             default:
                 throw new Error(`Unknown tool: ${action.type}`);
         }

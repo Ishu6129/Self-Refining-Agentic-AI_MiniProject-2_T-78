@@ -34,6 +34,14 @@ const UserSchema = new mongoose_1.default.Schema({
         type: Boolean,
         default: false,
     },
+    serperApiKey: {
+        type: String,
+        default: '',
+    },
+    useCustomSerperKey: {
+        type: Boolean,
+        default: false,
+    },
     role: {
         type: String,
         enum: ['admin', 'user'],

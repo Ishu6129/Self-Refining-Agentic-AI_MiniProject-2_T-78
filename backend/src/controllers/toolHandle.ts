@@ -1,4 +1,4 @@
-import { sendRequest } from "./tools";
+import { serperSearch, getExchangeRate } from "./tools";
 
 type ToolAction = {
   type: string;
@@ -14,21 +14,13 @@ export async function handleToolAction(action?: ToolAction): Promise<any> {
 
   try {
     switch (action.type) {
-      case "generate_image": {
-        const res = await sendRequest("generate-image", "POST", {
-          prompt: action.input,
-        });
-
-        if (res.error) {
-          return `Image generation failed: ${res.error}`;
-        }
-
-        return res.image_url || res.path || "Image generated";
+      case "web_search": {
+        return await serperSearch(action.input);
       }
 
-      // 👉 future tools can go here directly
-      // case "search_web":
-      //   return await sendRequest("search", "POST", { query: action.input });
+      case "currency_converter": {
+        return await getExchangeRate(action.input);
+      }
 
       default:
         throw new Error(`Unknown tool: ${action.type}`);

@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.chatText = chatText;
 exports.chatJSON = chatJSON;
+exports.chatWithMessages = chatWithMessages;
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const DEFAULT_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 function getClient(apiKey) {
@@ -36,5 +37,15 @@ async function chatJSON(system, user, temperature = 0.1, apiKey) {
     if (!raw)
         throw new Error('Empty response from LLM.');
     return JSON.parse(raw);
+}
+async function chatWithMessages(messages, temperature = 0.7, apiKey) {
+    const groq = getClient(apiKey);
+    const res = await groq.chat.completions.create({
+        model: DEFAULT_MODEL,
+        messages,
+        temperature,
+        max_tokens: 4096,
+    });
+    return res.choices[0]?.message?.content || '';
 }
 //# sourceMappingURL=base.agent.js.map

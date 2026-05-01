@@ -1,6 +1,6 @@
 # 🤖 Cloud-Deployed Self-Refining Agentic AI
 
-> An autonomous multi-agent AI system that accepts high-level abstract goals, decomposes them into structured sub-tasks, executes them, critiques its own output, and refines results iteratively — without human supervision.
+> A professional, cloud-deployed multi-agent system that bridges the gap between static LLM knowledge and real-world action. It accepts high-level abstract goals, autonomously decomposes them into live-researched sub-tasks, executes them using real-time data tools, and iteratively refines results through a self-correction loop.
 
 **Mini Project 2 · B.Tech CSE-AIML & IoT (III Year – VI Sem) · 2025–2026**
 **Department of Computer Science & Engineering · GLA University, Mathura**
@@ -33,11 +33,11 @@ User Goal
            (if quality score < 90)
 ```
 
-1. **Planner** — Decomposes the goal into ordered, actionable sub-tasks
-2. **Executor** — Faithfully executes each step from the plan
-3. **Critic** — Scores the output (0-100) and identifies issues
-4. **Refinement** — If score < 90, the system re-plans and re-executes automatically
-5. **Memory** — Extracts reusable context and persists it across sessions
+1. **Planner** — Decomposes the goal into ordered, actionable sub-tasks.
+2. **Executor** — The "hands" of the system. It bridges the gap to the physical world using **Real-Time Action Tools** (Web Search, Knowledge Retrieval, and Live Data APIs).
+3. **Critic** — Scores the output (0-100) and identifies logical gaps or hallucinations.
+4. **Refinement** — If score < 90, the system automatically re-plans and re-executes.
+5. **Memory** — Extracts key insights and persists them for long-term learning.
 
 ---
 
@@ -61,6 +61,7 @@ User Goal
 - Node.js ≥ 18
 - Free [Groq API key](https://console.groq.com) (takes 30 seconds to get)
 - Local MongoDB or MongoDB Atlas URI
+- [Serper.dev API Key](https://serper.dev) (for real-time web search)
 
 ### 1. Backend
 
@@ -77,7 +78,7 @@ Open `.env` and fill in **all required values**:
 | `MONGO_URI` | MongoDB Atlas connection string |
 | `GROQ_API_KEY` | Your Groq API key (free at [console.groq.com](https://console.groq.com)) |
 | `JWT_SECRET` | A long random string — generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
-| `NODE_ENV` | Set to `production` on Render/AWS |
+| `SERPER_API_KEY` | Your [Serper.dev](https://serper.dev) key (free tier available) |
 | `FRONTEND_URL` | Your Vercel URL (optional, for strict CORS) |
 
 ```bash
@@ -198,13 +199,17 @@ As a failover and secondary environment, we utilize Render and Vercel.
 │   │   ├── agent/
 │   │   │   ├── base.agent.ts           # Groq LLM wrapper
 │   │   │   ├── planner.agent.ts        # Goal decomposition
-│   │   │   ├── executor.agent.ts       # Task execution
+│   │   │   ├── executor.agent.ts       # Task execution with tool-loop
 │   │   │   ├── critic.agent.ts         # Quality evaluation
 │   │   │   └── memory.agent.ts         # Context extraction
+│   │   ├── controllers/
+│   │   │   ├── toolHandle.ts           # External tool logic (Search, Currency)
+│   │   │   └── tools.ts                # API request utility
 │   │   ├── orchestrator/
 │   │   │   └── pipeline.ts             # Full agent chain + in-memory store
 │   │   └── routes/
-│   │       └── agent.routes.ts         # REST API endpoints
+│   │       ├── agent.routes.ts         # REST API endpoints
+│   │       └── export.routes.ts        # PDF/DOCX generation
 │   ├── .env.example
 │   ├── package.json
 │   └── tsconfig.json
@@ -242,12 +247,12 @@ As a failover and secondary environment, we utilize Render and Vercel.
 | Core Objective / Requirement | Implementation Details | Status |
 |------------------------------|------------------------|--------|
 | **Autonomous Task Decomposition** | `Planner Agent` converts abstract goals into ordered sub-tasks. | ✅ Complete |
-| **Task Execution Engine** | `Executor Agent` executes decomposed sub-tasks. | ✅ Complete |
+| **Action-Based Execution** | `Executor Agent` interacts with the live web via **Native Tool Integration** to solve non-static problems. | ✅ Complete |
 | **Self-Critique Mechanism** | `Critic Agent` evaluates output quality without human supervision. | ✅ Complete |
 | **Planning-Execution-Reflection Loop** | Automated self-refinement loop triggers if quality score < 90. | ✅ Complete |
 | **Long-Term Memory Persistence** | `Memory Agent` stores past plans and critiques in MongoDB. | ✅ Complete |
 | **Cloud Deployment & Observability** | Deployed on AWS/Render with REST API & React Flow visualization. | ✅ Complete |
-| **Document Exporting** | Generates formatted PDF and DOCX Execution Reports. | ✅ Complete |
+| **Document Exporting** | Generates formatted PDF/DOCX Reports with **Memory Persistence**. | ✅ Complete |
 
 ---
 

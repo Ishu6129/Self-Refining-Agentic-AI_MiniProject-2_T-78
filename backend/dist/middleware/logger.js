@@ -7,13 +7,11 @@ exports.logger = logger;
 const Log_1 = __importDefault(require("../models/Log"));
 async function logger(req, res, next) {
     const start = Date.now();
-    // Robust IP detection for cloud deployments (Render, Vercel, AWS)
     const rawIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
         || req.ip
         || req.socket.remoteAddress
         || 'unknown';
-    // Normalize IPv6-mapped IPv4 (e.g. ::ffff:192.168.1.1 → 192.168.1.1)
-    // and IPv6 loopback (::1 → 127.0.0.1)
+    // ::1 = IPv6 loopback, ::ffff: prefix = IPv4-mapped IPv6
     const clientIp = rawIp === '::1'
         ? '127.0.0.1'
         : rawIp.startsWith('::ffff:')
@@ -30,9 +28,7 @@ async function logger(req, res, next) {
                 responseTime: Date.now() - start
             });
         }
-        catch (err) {
-            // Silent fail for logging errors to prevent request hanging
-        }
+        catch { }
     });
     next();
 }

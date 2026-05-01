@@ -71,20 +71,26 @@ export const useAuthStore = create((set, get) => {
       set({ token: null, user: null, isAuthenticated: false, error: null });
     },
 
-    // ── Save Groq API Key to backend ────────────────────────────────────────
-    saveGroqKey: async (groqApiKey, useCustomGroqKey) => {
+    // ── Save API Keys to backend ──────────────────────────────────────────
+    saveApiKeys: async ({ groqApiKey, useCustomGroqKey, serperApiKey, useCustomSerperKey }) => {
       const { token } = get();
       if (!token) return { success: false, error: 'Not authenticated.' };
       try {
         const res = await fetch(`${API_BASE}/auth/api-key`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ groqApiKey, useCustomGroqKey }),
+          body: JSON.stringify({ groqApiKey, useCustomGroqKey, serperApiKey, useCustomSerperKey }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to save API key.');
+        if (!res.ok) throw new Error(data.error || 'Failed to save API keys.');
+        
         // Update local user info
-        const updatedUser = { ...get().user, groqApiKey: groqApiKey ? '***stored***' : '', useCustomGroqKey };
+        const updatedUser = { ...get().user };
+        if (groqApiKey !== undefined) updatedUser.groqApiKey = groqApiKey ? '***stored***' : '';
+        if (useCustomGroqKey !== undefined) updatedUser.useCustomGroqKey = useCustomGroqKey;
+        if (serperApiKey !== undefined) updatedUser.serperApiKey = serperApiKey ? '***stored***' : '';
+        if (useCustomSerperKey !== undefined) updatedUser.useCustomSerperKey = useCustomSerperKey;
+
         localStorage.setItem('agentic-ai-user', JSON.stringify(updatedUser));
         set({ user: updatedUser });
         return { success: true };
