@@ -42,3 +42,17 @@ export async function chatJSON<T = any>(
   if (!raw) throw new Error('Empty response from LLM.');
   return JSON.parse(raw) as T;
 }
+export async function chatWithMessages(
+  messages: any[],
+  temperature: number = 0.7,
+  apiKey?: string,
+): Promise<string> {
+  const groq = getClient(apiKey);
+  const res = await groq.chat.completions.create({
+    model: DEFAULT_MODEL,
+    messages,
+    temperature,
+    max_tokens: 4096,
+  });
+  return res.choices[0]?.message?.content || '';
+}

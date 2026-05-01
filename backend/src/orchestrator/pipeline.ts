@@ -202,12 +202,12 @@ Refinement Focus: ${critique.refinementFocus}
     sendProgress('node_complete', 'planner', `✅ Refined Plan created`, 'success');
 
     sendProgress('node_start', 'executor', '⚙️  Executor running refined tasks...', 'info');
-    refinedResult = await executorAgent(refinedPlan, apiKey);
+    refinedResult = await executorAgent(refinedPlan!, apiKey);
     finalResult   = refinedResult;
 
     console.log(`[PIPELINE ${id}] Step 4b – Re-critiquing refined result`);
     sendProgress('node_start', 'critic', '🔍 Critic evaluating refined output...', 'info');
-    const refinedCritique = await criticAgent(goal, refinedPlan, refinedResult, apiKey);
+    const refinedCritique = await criticAgent(goal, refinedPlan!, refinedResult!, apiKey);
     finalScore = refinedCritique.qualityScore;
     console.log(`[PIPELINE ${id}] Refined score: ${finalScore}`);
     const rCritiqueType = finalScore >= 90 ? 'success' : finalScore >= 70 ? 'warning' : 'error';

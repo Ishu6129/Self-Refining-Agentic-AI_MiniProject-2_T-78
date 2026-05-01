@@ -8,10 +8,10 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = __importDefault(require("../models/User"));
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const router = (0, express_1.Router)();
-const JWT_SECRET = process.env.JWT_SECRET || 'agentic-ai-secret-key-change-in-prod';
-/* ──────────────────────────────────────────────────────────────
-   POST /auth/register
-────────────────────────────────────────────────────────────── */
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not set in environment variables.');
+}
 router.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
     if (!username || !email || !password) {
@@ -53,9 +53,6 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ success: false, error: 'Registration failed. Please try again.' });
     }
 });
-/* ──────────────────────────────────────────────────────────────
-   POST /auth/login
-────────────────────────────────────────────────────────────── */
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -85,6 +82,8 @@ router.post('/login', async (req, res) => {
                 role: user.role,
                 groqApiKey: user.groqApiKey ? '***stored***' : '',
                 useCustomGroqKey: user.useCustomGroqKey,
+                serperApiKey: user.serperApiKey ? '***stored***' : '',
+                useCustomSerperKey: user.useCustomSerperKey,
             },
         });
     }
@@ -93,9 +92,6 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ success: false, error: 'Login failed. Please try again.' });
     }
 });
-/* ──────────────────────────────────────────────────────────────
-   GET /auth/me  (protected)
-────────────────────────────────────────────────────────────── */
 router.get('/me', auth_middleware_1.authMiddleware, async (req, res) => {
     try {
         const user = await User_1.default.findById(req.userId).select('-password');
@@ -112,6 +108,8 @@ router.get('/me', auth_middleware_1.authMiddleware, async (req, res) => {
                 role: user.role,
                 groqApiKey: user.groqApiKey ? '***stored***' : '',
                 useCustomGroqKey: user.useCustomGroqKey,
+                serperApiKey: user.serperApiKey ? '***stored***' : '',
+                useCustomSerperKey: user.useCustomSerperKey,
             },
         });
     }
@@ -119,17 +117,20 @@ router.get('/me', auth_middleware_1.authMiddleware, async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
-/* ──────────────────────────────────────────────────────────────
-   PUT /auth/api-key  (protected) — save user's Groq key
-────────────────────────────────────────────────────────────── */
 router.put('/api-key', auth_middleware_1.authMiddleware, async (req, res) => {
     const authReq = req;
-    const { groqApiKey, useCustomGroqKey } = authReq.body;
+    const { groqApiKey, useCustomGroqKey, serperApiKey, useCustomSerperKey } = authReq.body;
     try {
-        await User_1.default.findByIdAndUpdate(authReq.userId, {
-            groqApiKey: groqApiKey || '',
-            useCustomGroqKey: Boolean(useCustomGroqKey),
-        });
+        const updateData = {};
+        if (groqApiKey !== undefined)
+            updateData.groqApiKey = groqApiKey;
+        if (useCustomGroqKey !== undefined)
+            updateData.useCustomGroqKey = Boolean(useCustomGroqKey);
+        if (serperApiKey !== undefined)
+            updateData.serperApiKey = serperApiKey;
+        if (useCustomSerperKey !== undefined)
+            updateData.useCustomSerperKey = Boolean(useCustomSerperKey);
+        await User_1.default.findByIdAndUpdate(authReq.userId, updateData);
         res.status(200).json({ success: true, message: 'API key settings saved.' });
     }
     catch (err) {

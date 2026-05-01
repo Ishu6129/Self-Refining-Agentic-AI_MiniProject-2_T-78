@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, CheckCircle, Key, ToggleLeft, ToggleRight, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Save, CheckCircle, Key, ToggleLeft, ToggleRight, Eye, EyeOff, ShieldCheck, Search } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const DEFAULT_SETTINGS = {
@@ -9,26 +9,41 @@ const DEFAULT_SETTINGS = {
   enableLogs: true,
 };
 
-// ─── Groq API Key storage helpers (localStorage) ──────────────────────────────
+// ─── API Key storage helpers (localStorage) ──────────────────────────────
 const GROQ_KEY_STORAGE = 'agentic-ai-groq-key';
 const GROQ_MODE_STORAGE = 'agentic-ai-groq-mode'; // 'system' | 'custom'
+
+const SERPER_KEY_STORAGE = 'agentic-ai-serper-key';
+const SERPER_MODE_STORAGE = 'agentic-ai-serper-mode'; // 'system' | 'custom'
 
 export function getActiveGroqKey() {
   const mode = localStorage.getItem(GROQ_MODE_STORAGE) || 'system';
   if (mode === 'custom') {
     return localStorage.getItem(GROQ_KEY_STORAGE) || '';
   }
-  return ''; // empty = backend uses system key
+  return ''; 
 }
 
-export function isUsingCustomKey() {
+export function getActiveSerperKey() {
+  const mode = localStorage.getItem(SERPER_MODE_STORAGE) || 'system';
+  if (mode === 'custom') {
+    return localStorage.getItem(SERPER_KEY_STORAGE) || '';
+  }
+  return ''; 
+}
+
+export function isUsingCustomGroqKey() {
   return localStorage.getItem(GROQ_MODE_STORAGE) === 'custom';
+}
+
+export function isUsingCustomSerperKey() {
+  return localStorage.getItem(SERPER_MODE_STORAGE) === 'custom';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Settings = () => {
-  const { user, saveGroqKey, isAuthenticated } = useAuthStore();
+  const { user, saveApiKeys, isAuthenticated } = useAuthStore();
 
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [saved, setSaved]        = useState(false);
@@ -36,12 +51,21 @@ const Settings = () => {
 
   // Groq key state
   const [groqApiKey, setGroqApiKey]       = useState('');
-  const [useCustomKey, setUseCustomKey]   = useState(false);
-  const [showKey, setShowKey]             = useState(false);
-  const [keyValidating, setKeyValidating] = useState(false);
-  const [keyStatus, setKeyStatus]         = useState(null); // null | 'valid' | 'invalid'
+  const [useCustomGroqKey, setUseCustomGroqKey]   = useState(false);
+  const [showGroqKey, setShowGroqKey]             = useState(false);
+  const [groqValidating, setGroqValidating] = useState(false);
+  const [groqStatus, setGroqStatus]         = useState(null);
+  const [groqError, setGroqError]           = useState('');
+
+  // Serper key state
+  const [serperApiKey, setSerperApiKey]       = useState('');
+  const [useCustomSerperKey, setUseCustomSerperKey] = useState(false);
+  const [showSerperKey, setShowSerperKey]             = useState(false);
+  const [serperValidating, setSerperValidating] = useState(false);
+  const [serperStatus, setSerperStatus]         = useState(null);
+  const [serperError, setSerperError]           = useState('');
+
   const [keySaved, setKeySaved]           = useState(false);
-  const [keyError, setKeyError]           = useState('');
 
   // Load settings
   useEffect(() => {
@@ -49,11 +73,14 @@ const Settings = () => {
     if (saved) {
       try { setSettings(JSON.parse(saved)); } catch (_) {}
     }
-    // Load saved groq key preference
-    const storedKey = localStorage.getItem(GROQ_KEY_STORAGE) || '';
-    const storedMode = localStorage.getItem(GROQ_MODE_STORAGE) || 'system';
-    setGroqApiKey(storedKey);
-    setUseCustomKey(storedMode === 'custom');
+    
+    // Load Groq
+    setGroqApiKey(localStorage.getItem(GROQ_KEY_STORAGE) || '');
+    setUseCustomGroqKey(localStorage.getItem(GROQ_MODE_STORAGE) === 'custom');
+    
+    // Load Serper
+    setSerperApiKey(localStorage.getItem(SERPER_KEY_STORAGE) || '');
+    setUseCustomSerperKey(localStorage.getItem(SERPER_MODE_STORAGE) === 'custom');
   }, []);
 
   const handleSave = () => {
@@ -73,53 +100,75 @@ const Settings = () => {
     }
   };
 
-  // Validate Groq API key by making a minimal test request
-  const validateKey = async () => {
+  const validateGroqKey = async () => {
     if (!groqApiKey.trim()) {
-      setKeyError('Please enter a Groq API key first.');
+      setGroqError('Please enter a Groq API key.');
       return;
     }
-    setKeyValidating(true);
-    setKeyStatus(null);
-    setKeyError('');
-    const userId = user?.id; 
+    setGroqValidating(true);
+    setGroqStatus(null);
+    setGroqError('');
     try {
-      await fetch(`${settings.apiEndpoint}/agent/status/${userId}`); // ensure backend is up
-      
-      // Simple lightweight check directly against Groq to verify the key
       const testRes = await fetch('https://api.groq.com/openai/v1/models', {
         headers: { 'Authorization': `Bearer ${groqApiKey.trim()}` }
       });
-      
-      if (testRes.ok) {
-        setKeyStatus('valid');
-      } else {
+      if (testRes.ok) setGroqStatus('valid');
+      else {
         const data = await testRes.json();
-        setKeyStatus('invalid');
-        setKeyError(data.error?.message || 'Key validation failed.');
+        setGroqStatus('invalid');
+        setGroqError(data.error?.message || 'Validation failed.');
       }
     } catch (_) {
-      setKeyStatus('invalid');
-      setKeyError('Could not reach backend to validate key.');
+      setGroqStatus('invalid');
+      setGroqError('Validation request failed.');
     } finally {
-      setKeyValidating(false);
+      setGroqValidating(false);
     }
   };
 
-  const saveGroqSettings = async () => {
-    setKeyError('');
-    if (useCustomKey && !groqApiKey.trim()) {
-      setKeyError('Please enter your Groq API key to use custom key mode.');
+  const validateSerperKey = async () => {
+    if (!serperApiKey.trim()) {
+      setSerperError('Please enter a Serper API key.');
       return;
     }
+    setSerperValidating(true);
+    setSerperStatus(null);
+    setSerperError('');
+    try {
+      const testRes = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': serperApiKey.trim(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: 'test' })
+      });
+      if (testRes.ok) setSerperStatus('valid');
+      else {
+        setSerperStatus('invalid');
+        setSerperError('Invalid API key or rate limit exceeded.');
+      }
+    } catch (_) {
+      setSerperStatus('invalid');
+      setSerperError('Validation request failed.');
+    } finally {
+      setSerperValidating(false);
+    }
+  };
 
-    // Always save to localStorage for immediate use
+  const saveAllApiSettings = async () => {
+    // Save to local storage
     localStorage.setItem(GROQ_KEY_STORAGE, groqApiKey.trim());
-    localStorage.setItem(GROQ_MODE_STORAGE, useCustomKey ? 'custom' : 'system');
+    localStorage.setItem(GROQ_MODE_STORAGE, useCustomGroqKey ? 'custom' : 'system');
+    
+    localStorage.setItem(SERPER_KEY_STORAGE, serperApiKey.trim());
+    localStorage.setItem(SERPER_MODE_STORAGE, useCustomSerperKey ? 'custom' : 'system');
 
-    // Also persist to backend if authenticated
+    // Save to backend if logged in
     if (isAuthenticated) {
-      await saveGroqKey(groqApiKey.trim(), useCustomKey);
+      await saveApiKeys({
+        groqApiKey: groqApiKey.trim(),
+        useCustomGroqKey,
+        serperApiKey: serperApiKey.trim(),
+        useCustomSerperKey
+      });
     }
 
     setKeySaved(true);
@@ -127,209 +176,177 @@ const Settings = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 h-full overflow-y-auto max-w">
+    <div className="p-6 space-y-6 h-full overflow-y-auto max-w-4xl mx-auto pb-20">
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-gray-400 mt-1">Configure system preferences and API keys</p>
+        <h1 className="text-2xl font-bold text-white">Settings</h1>
+        <p className="text-gray-400 mt-1">Configure system preferences and custom API credentials</p>
       </div>
 
       {/* ── General Settings ─────────────────────────────────────────────── */}
-      <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 space-y-5">
-        <h2 className="text-lg font-semibold text-white">General</h2>
+      <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 space-y-5 shadow-lg">
+        <h2 className="text-lg font-semibold text-white">General Preferences</h2>
 
-        {/* API Endpoint */}
         <div>
           <label className="block text-sm text-gray-400 mb-1">Backend API Endpoint</label>
           <div className="flex gap-2">
             <input
               type="text"
-              className="flex-1 px-4 py-2 bg-dark-900 border border-dark-700 rounded-lg focus:border-primary-500 focus:outline-none"
+              className="flex-1 px-4 py-2 bg-dark-900 border border-dark-700 rounded-lg focus:border-primary-500 focus:outline-none text-white text-sm"
               value={settings.apiEndpoint}
               onChange={(e) => setSettings({ ...settings, apiEndpoint: e.target.value })}
-              placeholder="http://localhost:5000"
             />
-            <button
-              onClick={testBackend}
-              className="px-4 py-2 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors text-sm"
-            >
-              Test
-            </button>
+            <button onClick={testBackend} className="px-4 py-2 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors text-sm text-white">Test</button>
           </div>
-          {backendOk === true  && <p className="text-emerald-400 text-xs mt-1">✅ Backend is reachable</p>}
-          {backendOk === false && <p className="text-red-400 text-xs mt-1">❌ Cannot reach backend. Is it running?</p>}
-          <p className="text-gray-600 text-xs mt-1">Default: http://localhost:5000</p>
+          {backendOk === true  && <p className="text-emerald-400 text-xs mt-1">✅ Connection established</p>}
+          {backendOk === false && <p className="text-red-400 text-xs mt-1">❌ Connection failed</p>}
         </div>
 
-        {/* Timeout & Retries */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Execution Timeout (seconds)</label>
+            <label className="block text-sm text-gray-400 mb-1">Timeout (sec)</label>
             <input
               type="number"
-              min={10} max={300}
-              className="w-full px-4 py-2 bg-dark-900 border border-dark-700 rounded-lg focus:border-primary-500 focus:outline-none"
+              className="w-full px-4 py-2 bg-dark-900 border border-dark-700 rounded-lg focus:border-primary-500 focus:outline-none text-white text-sm"
               value={settings.executionTimeout}
               onChange={(e) => setSettings({ ...settings, executionTimeout: parseInt(e.target.value) })}
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Max Refinement Retries</label>
+            <label className="block text-sm text-gray-400 mb-1">Max Retries</label>
             <input
               type="number"
-              min={0} max={3}
-              className="w-full px-4 py-2 bg-dark-900 border border-dark-700 rounded-lg focus:border-primary-500 focus:outline-none"
+              className="w-full px-4 py-2 bg-dark-900 border border-dark-700 rounded-lg focus:border-primary-500 focus:outline-none text-white text-sm"
               value={settings.maxRetries}
               onChange={(e) => setSettings({ ...settings, maxRetries: parseInt(e.target.value) })}
             />
           </div>
         </div>
 
-        {/* Enable Logs */}
-        <div className="flex items-center gap-3">
-          <input
-            id="enableLogs"
-            type="checkbox"
-            className="w-4 h-4 accent-primary-500"
-            checked={settings.enableLogs}
-            onChange={(e) => setSettings({ ...settings, enableLogs: e.target.checked })}
-          />
-          <label htmlFor="enableLogs" className="text-sm text-gray-300">
-            Show execution logs in Workflow Builder
-          </label>
-        </div>
-
         <div className="flex justify-end">
-          <button onClick={handleSave} className="btn-primary flex items-center gap-2">
+          <button onClick={handleSave} className="px-4 py-2 bg-primary-600 hover:bg-primary-500 rounded-lg transition-all flex items-center gap-2 text-white text-sm font-medium">
             {saved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            {saved ? 'Saved!' : 'Save Settings'}
+            {saved ? 'Settings Saved' : 'Save General Settings'}
           </button>
         </div>
       </div>
 
-      {/* ── Groq API Key ──────────────────────────────────────────────────── */}
-      <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 space-y-5">
-        <div className="flex items-center gap-3">
-          <Key className="w-5 h-5 text-primary-400" />
-          <h2 className="text-lg font-semibold text-white">Groq API Key</h2>
-        </div>
-
-        <p className="text-sm text-gray-400">
-          By default the system uses the server's built-in API key. You can provide your own
-          Groq API key for personal rate limits and usage tracking.
-        </p>
-
-        {/* Toggle system vs custom */}
-        <div
-          onClick={() => setUseCustomKey(!useCustomKey)}
-          className="flex items-center justify-between p-4 bg-dark-900 border border-dark-700 rounded-lg cursor-pointer hover:border-primary-500/50 transition-colors"
-        >
-          <div>
-            <p className="text-sm font-medium text-white">
-              {useCustomKey ? 'Using your API key' : 'Using system API key'}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {useCustomKey
-                ? 'Your requests use your personal Groq key'
-                : 'Requests use the shared server-side key'}
-            </p>
+      {/* ── API Keys Container ────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-white px-1">API Credentials</h2>
+        
+        {/* Groq Section */}
+        <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary-500/10 rounded-lg"><Key className="w-5 h-5 text-primary-400" /></div>
+              <div>
+                <h3 className="text-white font-medium">Groq LLM API</h3>
+                <p className="text-xs text-gray-500">Powers the agent's reasoning and planning</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setUseCustomGroqKey(!useCustomGroqKey)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${useCustomGroqKey ? 'bg-primary-500/10 border-primary-500/50 text-primary-400' : 'bg-dark-900 border-dark-700 text-gray-500'}`}
+            >
+              <span className="text-xs font-bold">{useCustomGroqKey ? 'CUSTOM' : 'SYSTEM'}</span>
+              {useCustomGroqKey ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${useCustomKey ? 'bg-primary-500/20 text-primary-400' : 'bg-gray-700 text-gray-400'}`}>
-              {useCustomKey ? 'Custom' : 'System'}
-            </span>
-            {useCustomKey
-              ? <ToggleRight className="w-6 h-6 text-primary-400" />
-              : <ToggleLeft className="w-6 h-6 text-gray-500" />}
-          </div>
-        </div>
 
-        {/* Key Input (shown when custom is toggled on) */}
-        {useCustomKey && (
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Your Groq API Key</label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
+          {useCustomGroqKey ? (
+            <div className="space-y-3 pt-2">
+              <div className="relative">
                 <input
-                  type={showKey ? 'text' : 'password'}
+                  type={showGroqKey ? 'text' : 'password'}
+                  className="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-lg focus:border-primary-500 focus:outline-none text-white text-sm font-mono"
                   value={groqApiKey}
-                  onChange={(e) => { setGroqApiKey(e.target.value); setKeyStatus(null); setKeyError(''); }}
+                  onChange={(e) => { setGroqApiKey(e.target.value); setGroqStatus(null); }}
                   placeholder="gsk_..."
-                  className="w-full px-4 py-2 pr-10 bg-dark-900 border border-dark-700 rounded-lg focus:border-primary-500 focus:outline-none font-mono text-sm"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                >
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <button onClick={() => setShowGroqKey(!showGroqKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                  {showGroqKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <button
-                onClick={validateKey}
-                disabled={keyValidating}
-                className="px-4 py-2 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors text-sm disabled:opacity-50"
-              >
-                {keyValidating ? 'Testing...' : 'Test Key'}
-              </button>
+              <div className="flex items-center justify-between">
+                <button onClick={validateGroqKey} disabled={groqValidating} className="text-xs text-primary-400 hover:text-primary-300 font-medium">
+                  {groqValidating ? 'Validating...' : 'Verify Key'}
+                </button>
+                {groqStatus === 'valid' && <span className="text-[10px] text-emerald-400">Key is active</span>}
+                {groqStatus === 'invalid' && <span className="text-[10px] text-red-400">{groqError || 'Invalid key'}</span>}
+              </div>
             </div>
+          ) : (
+            <div className="p-3 bg-dark-900/50 border border-dark-700/50 rounded-lg text-xs text-gray-500 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" /> Using shared system key with default rate limits.
+            </div>
+          )}
+        </div>
 
-            {keyStatus === 'valid' && (
-              <p className="flex items-center gap-1.5 text-emerald-400 text-xs mt-1.5">
-                <CheckCircle className="w-3.5 h-3.5" /> Key is valid and working
-              </p>
-            )}
-            {keyStatus === 'invalid' && (
-              <p className="flex items-center gap-1.5 text-red-400 text-xs mt-1.5">
-                <AlertCircle className="w-3.5 h-3.5" /> {keyError || 'Key validation failed'}
-              </p>
-            )}
-
-            <p className="text-gray-600 text-xs mt-1.5">
-              Get your free API key at{' '}
-              <a href="https://console.groq.com" target="_blank" rel="noreferrer" className="text-primary-400 hover:underline">
-                console.groq.com
-              </a>
-            </p>
+        {/* Serper Section */}
+        <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg"><Search className="w-5 h-5 text-blue-400" /></div>
+              <div>
+                <h3 className="text-white font-medium">Serper Search API</h3>
+                <p className="text-xs text-gray-500">Powers real-time web research tools</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setUseCustomSerperKey(!useCustomSerperKey)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${useCustomSerperKey ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'bg-dark-900 border-dark-700 text-gray-500'}`}
+            >
+              <span className="text-xs font-bold">{useCustomSerperKey ? 'CUSTOM' : 'SYSTEM'}</span>
+              {useCustomSerperKey ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+            </button>
           </div>
-        )}
 
-        {/* System key info (shown when system mode is active) */}
-        {!useCustomKey && (
-          <div className="flex items-start gap-3 p-3 bg-primary-500/5 border border-primary-500/20 rounded-lg">
-            <ShieldCheck className="w-4 h-4 text-primary-400 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-gray-400">
-              You're using the system's shared Groq API key. This key has shared rate limits.
-              Switch to your own key for dedicated usage.
-            </p>
-          </div>
-        )}
+          {useCustomSerperKey ? (
+            <div className="space-y-3 pt-2">
+              <div className="relative">
+                <input
+                  type={showSerperKey ? 'text' : 'password'}
+                  className="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-lg focus:border-blue-500 focus:outline-none text-white text-sm font-mono"
+                  value={serperApiKey}
+                  onChange={(e) => { setSerperApiKey(e.target.value); setSerperStatus(null); }}
+                  placeholder="Enter Serper.dev Key"
+                />
+                <button onClick={() => setShowSerperKey(!showSerperKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                  {showSerperKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <button onClick={validateSerperKey} disabled={serperValidating} className="text-xs text-blue-400 hover:text-blue-300 font-medium">
+                  {serperValidating ? 'Validating...' : 'Verify Key'}
+                </button>
+                {serperStatus === 'valid' && <span className="text-[10px] text-emerald-400">Key is active</span>}
+                {serperStatus === 'invalid' && <span className="text-[10px] text-red-400">{serperError || 'Invalid key'}</span>}
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-dark-900/50 border border-dark-700/50 rounded-lg text-xs text-gray-500 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" /> Using shared system key for web research.
+            </div>
+          )}
+        </div>
 
-        {keyError && !useCustomKey && (
-          <p className="text-red-400 text-xs">{keyError}</p>
-        )}
-
-        {/* Save Groq Settings */}
-        <div className="flex justify-end">
-          <button onClick={saveGroqSettings} className="btn-primary flex items-center gap-2">
-            {keySaved ? <CheckCircle className="w-4 h-4" /> : <Key className="w-4 h-4" />}
-            {keySaved ? 'Saved!' : 'Save API Key Settings'}
+        <div className="flex justify-end pt-2">
+          <button onClick={saveAllApiSettings} className="px-6 py-2.5 bg-white hover:bg-gray-100 text-dark-900 rounded-xl transition-all flex items-center gap-2 text-sm font-bold shadow-xl">
+            {keySaved ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Save className="w-4 h-4" />}
+            {keySaved ? 'All Credentials Saved' : 'Update All API Credentials'}
           </button>
         </div>
       </div>
 
-      {/* Account info (if logged in) */}
+      {/* Account info */}
       {isAuthenticated && user && (
-        <div className="bg-dark-800 border border-dark-700 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-3">Account</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-500">Username</p>
-              <p className="text-white font-medium">{user.username}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Email</p>
-              <p className="text-white font-medium">{user.email}</p>
-            </div>
+        <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-white font-semibold">User Profile</h2>
+            <p className="text-xs text-gray-500 mt-1">{user.email} ({user.role})</p>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] bg-dark-700 px-2 py-1 rounded text-gray-400 uppercase tracking-widest font-bold">Authenticated</span>
           </div>
         </div>
       )}

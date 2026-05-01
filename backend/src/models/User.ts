@@ -7,6 +7,8 @@ export interface IUser extends Document {
   password: string;
   groqApiKey?: string;
   useCustomGroqKey: boolean;
+  serperApiKey?: string;
+  useCustomSerperKey: boolean;
   role: 'admin' | 'user';
   createdAt: Date;
   updatedAt: Date;
@@ -40,6 +42,14 @@ const UserSchema = new mongoose.Schema<IUser>(
       default: '',
     },
     useCustomGroqKey: {
+      type: Boolean,
+      default: false,
+    },
+    serperApiKey: {
+      type: String,
+      default: '',
+    },
+    useCustomSerperKey: {
       type: Boolean,
       default: false,
     },

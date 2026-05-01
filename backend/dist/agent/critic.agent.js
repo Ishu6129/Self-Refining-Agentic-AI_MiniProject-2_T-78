@@ -35,12 +35,11 @@ Start at 100. Apply deductions:
 
 | Condition                  | Deduction | Hard Floor |
 |----------------------------|-----------|------------|
-| Each BLOCKED step          | -8        | none       |
-| Each FAILED step           | -12       | none       |
-| Goal not addressed         | -25       | score ≤ 49 |
-| Hallucinated data detected | -20       | score ≤ 49 |
-| Logical contradiction      | -15       | none       |
-| Output unusable/unclear    | -10       | none       |
+| Step not addressed in log   | -10       | none       |
+| Goal not addressed          | -40       | score ≤ 30 |
+| Hallucinated data detected  | -25       | score ≤ 49 |
+| Logical contradiction       | -15       | none       |
+| Output unusable/unclear     | -15       | none       |
 
 Thresholds:
 90-100 → isSatisfactory: true,  needsRefinement: false

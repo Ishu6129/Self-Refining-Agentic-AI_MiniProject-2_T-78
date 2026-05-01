@@ -47,6 +47,13 @@ For GENERIC tasks:
   Steps must be logically achievable.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AVAILABLE TOOLS (for Executor)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The Executor Agent has access to the following tools. Plan steps that utilize them when needed:
+* web_search: For current events, news, or any data not in the model's training set.
+* currency_converter: For real-time exchange rates (e.g., USD to INR).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 UNIVERSAL RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 1. One primary objective only.

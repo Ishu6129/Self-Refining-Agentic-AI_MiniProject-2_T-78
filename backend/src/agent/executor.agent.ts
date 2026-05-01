@@ -1,9 +1,25 @@
-import { chatText } from "./base.agent";
+import { chatWithMessages } from "./base.agent";
+import { handleToolAction } from "../controllers/toolHandle";
 
 const EXECUTOR_SYSTEM_PROMPT = `
 You are the Executor Agent in a multi-agent AI system.
-You receive a structured plan from the Planning Agent and execute it.
-Your sole function is faithful, precise execution that produces the actual deliverable.
+You receive a structured plan and execute it. 
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REAL-TIME DATA ACCESS (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If a task requires current information (exchange rates, weather, news, etc.) that you do not have:
+1. You MUST NOT guess or simulate the data.
+2. You MUST use a TOOL CALL in your "Step Log".
+3. Format your tool call exactly like this:
+   [TOOL_CALL: tool_name | input_query]
+
+Available Tools:
+* web_search: Fetches live data from the internet.
+* currency_converter: Fetches live exchange rates.
+
+Example:
+* Step 4 — Fetch USD to INR rate: [TOOL_CALL: currency_converter | USD_TO_INR]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ROLE BOUNDARY
@@ -15,7 +31,7 @@ You are ONLY an executor.
 - If you catch yourself planning — STOP. Execute only.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CRITICAL OUTPUT RULE — READ CAREFULLY
+OUTPUT RULES (CODE, CREATIVE, ANALYSIS)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Look at the Plan's "## Task Type" field and the goal. Apply the correct output rule:
 
@@ -48,37 +64,78 @@ TASK TYPE = GENERIC:
   → Final Output is whatever the goal requires.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXECUTION RULES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Execute steps in exact order.
-2. If input missing → tag [BLOCKED: reason], skip, continue rest.
-3. If step fails → tag [FAILED: reason], continue rest.
-4. If step is impossible for a fictional/creative task → skip it and produce the creative content directly.
-5. All steps blocked/failed → "Execution failed: [list]." STOP.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT SCHEMA
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 # Execution Result
 
 ## Task
-[Restate goal exactly. One sentence.]
+[Restate goal]
 
 ## Step Log
-- Step [N] — [step name]: [Completed / BLOCKED: reason / FAILED: reason]
-  [Brief note on what was done]
+* Step [N] — [step name]: [Completed / TOOL_CALL: tool_name | query]
+  [If completed, note what was done. If TOOL_CALL, the system will provide the observation.]
 
 ## Final Output
-[THE ACTUAL DELIVERABLE — code, story, analysis, etc. This is what the user gets.]
-
-## Execution Summary
-- Completed: [N] | Blocked: [N] | Failed: [N]
-
-## Assumptions
-[Bullet list. "None" if clean.]
+[THE ACTUAL DELIVERABLE. If you used a tool, use the real data provided in the observations.]
 `.trim();
 
+
+
 export async function executorAgent(plan: string, apiKey?: string) {
-  return await chatText(EXECUTOR_SYSTEM_PROMPT, plan, 0.1, apiKey);
+  let messages: any[] = [
+    { role: "system", content: EXECUTOR_SYSTEM_PROMPT },
+    { role: "user", content: plan }
+  ];
+
+  let iterations = 0;
+  const MAX_ITERATIONS = 5;
+  let lastQuery = "";
+
+  try {
+    while (iterations < MAX_ITERATIONS) {
+      const response = await chatWithMessages(messages, 0.1, apiKey);
+      messages.push({ role: "assistant", content: response });
+
+      // Robust regex for [TOOL_CALL: name | query]
+      const toolCallMatch = response.match(/\[TOOL_CALL:\s*(\w+)\s*\|\s*(.*?)\]/i);
+      
+      if (toolCallMatch) {
+        const toolName = toolCallMatch[1].toLowerCase();
+        const query = toolCallMatch[2].trim();
+
+        // Prevent infinite loops on same query
+        if (query === lastQuery && iterations > 0) {
+          messages.push({ role: "user", content: "OBSERVATION: Tool returned the same result. Please proceed to Final Output based on available info." });
+          iterations++;
+          continue;
+        }
+        lastQuery = query;
+
+        console.log(`🚀 Executing tool: ${toolName} | Query: ${query}`);
+        
+        try {
+          const toolResult = await handleToolAction({ type: toolName, input: query });
+          const resultString = typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult);
+          
+          messages.push({ 
+            role: "user", 
+            content: `OBSERVATION: ${resultString}` 
+          });
+        } catch (toolError: any) {
+          messages.push({ 
+            role: "user", 
+            content: `OBSERVATION: Error executing tool ${toolName}: ${toolError.message}` 
+          });
+        }
+        iterations++;
+      } else {
+        return response;
+      }
+    }
+  } catch (err: any) {
+    console.error("❌ Executor Agent Error:", err.message);
+    return `Execution failed due to a system error: ${err.message}`;
+  }
+
+  return messages[messages.length - 1].content;
 }

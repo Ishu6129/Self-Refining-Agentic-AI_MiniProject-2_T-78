@@ -92,6 +92,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         role: user.role,
         groqApiKey: user.groqApiKey ? '***stored***' : '',
         useCustomGroqKey: user.useCustomGroqKey,
+        serperApiKey: user.serperApiKey ? '***stored***' : '',
+        useCustomSerperKey: user.useCustomSerperKey,
       },
     });
   } catch (err: any) {
@@ -116,6 +118,8 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response): Promi
         role: user.role,
         groqApiKey: user.groqApiKey ? '***stored***' : '',
         useCustomGroqKey: user.useCustomGroqKey,
+        serperApiKey: user.serperApiKey ? '***stored***' : '',
+        useCustomSerperKey: user.useCustomSerperKey,
       },
     });
   } catch (err: any) {
@@ -125,13 +129,16 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response): Promi
 
 router.put('/api-key', authMiddleware, async (req, res: Response): Promise<void> => {
   const authReq = req as AuthRequest;
-  const { groqApiKey, useCustomGroqKey } = authReq.body;
-
+  const { groqApiKey, useCustomGroqKey, serperApiKey, useCustomSerperKey } = authReq.body;
+  
   try {
-    await User.findByIdAndUpdate(authReq.userId, {
-      groqApiKey: groqApiKey || '',
-      useCustomGroqKey: Boolean(useCustomGroqKey),
-    });
+    const updateData: any = {};
+    if (groqApiKey !== undefined) updateData.groqApiKey = groqApiKey;
+    if (useCustomGroqKey !== undefined) updateData.useCustomGroqKey = Boolean(useCustomGroqKey);
+    if (serperApiKey !== undefined) updateData.serperApiKey = serperApiKey;
+    if (useCustomSerperKey !== undefined) updateData.useCustomSerperKey = Boolean(useCustomSerperKey);
+
+    await User.findByIdAndUpdate(authReq.userId, updateData);
     res.status(200).json({ success: true, message: 'API key settings saved.' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
