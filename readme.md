@@ -116,7 +116,8 @@ App opens at **http://localhost:3000**
 4. Click **Execute** in the top header
 5. Watch each node animate as it runs
 6. See the result in the right panel that slides open
-7. Check **Dashboard**, **Execution History**, and **Memory Store** pages for full details
+7. Use the **Settings** page to manage your **Groq** and **Serper** API credentials securely.
+8. Check **Dashboard**, **Execution History**, and **Memory Store** pages for full details.
 
 ---
 
